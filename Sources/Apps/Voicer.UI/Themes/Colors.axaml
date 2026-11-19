@@ -65,6 +65,21 @@
     <GradientStop Offset="1" Color="#4A8FF7" />
   </LinearGradientBrush>
 
+  <!--
+    The main button of a page: two gradients of the colours of the logo, running in opposite directions; the upper one
+    fades in and out, so the colours flow from one side to the other.
+  -->
+  <LinearGradientBrush x:Key="HeroGradientBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Offset="0" Color="#4A8FF7" />
+    <GradientStop Offset="0.5" Color="#8B7CF8" />
+    <GradientStop Offset="1" Color="#C084FC" />
+  </LinearGradientBrush>
+  <LinearGradientBrush x:Key="HeroShimmerBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Offset="0" Color="#C084FC" />
+    <GradientStop Offset="0.5" Color="#8B7CF8" />
+    <GradientStop Offset="1" Color="#4A8FF7" />
+  </LinearGradientBrush>
+
   <!-- The light: soft halos of the accent, from a hint to the glow of an element in focus. -->
   <BoxShadows x:Key="GlowSoft">0 0 14 0 #594A8FF7</BoxShadows>
   <BoxShadows x:Key="GlowStrong">0 0 22 2 #8C4A8FF7</BoxShadows>

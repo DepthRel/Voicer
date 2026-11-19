@@ -6,13 +6,14 @@ namespace Voicer.Speech.Whisper.Worker;
 
 /// <summary>
 /// The command line of the worker process: <c>devices</c>, or
-/// <c>transcribe --model &lt;file&gt; --audio &lt;file&gt; --device &lt;index&gt;</c>.
+/// <c>transcribe --model &lt;file&gt; --audio &lt;file&gt; --device &lt;index&gt; [--vad &lt;file&gt;]</c>.
 /// </summary>
 /// <param name="Command">The command, <see cref="WorkerProtocol.DEVICES_COMMAND"/> or <see cref="WorkerProtocol.TRANSCRIBE_COMMAND"/>.</param>
 /// <param name="ModelPath">The file of the model, for a recognition.</param>
 /// <param name="AudioPath">The WAV file, for a recognition.</param>
 /// <param name="DeviceIndex">The index of the video card, or <c>-1</c> for the processor.</param>
-public sealed record WorkerCommandLine(string Command, string? ModelPath, string? AudioPath, int DeviceIndex)
+/// <param name="DetectorPath">The file of the detector of speech, or <see langword="null"/> to recognize the whole sound.</param>
+public sealed record WorkerCommandLine(string Command, string? ModelPath, string? AudioPath, int DeviceIndex, string? DetectorPath = null)
 {
     /// <summary>
     /// Reads the command line of the worker.
@@ -93,7 +94,8 @@ public sealed record WorkerCommandLine(string Command, string? ModelPath, string
             return false;
         }
 
-        commandLine = new WorkerCommandLine(WorkerProtocol.TRANSCRIBE_COMMAND, model, audio, device);
+        options.TryGetValue(WorkerProtocol.DETECTOR_OPTION, out var detector);
+        commandLine = new WorkerCommandLine(WorkerProtocol.TRANSCRIBE_COMMAND, model, audio, device, string.IsNullOrWhiteSpace(detector) ? null : detector);
 
         return true;
     }

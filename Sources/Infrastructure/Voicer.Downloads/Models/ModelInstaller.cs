@@ -29,11 +29,27 @@ public sealed class ModelInstaller : IModelInstaller
     }
 
     /// <inheritdoc />
-    public Task InstallAsync(SpeechModel model, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+    public async Task InstallAsync(SpeechModel model, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(model);
 
         var request = new DownloadRequest(model.DownloadUri, _store.FileOf(model), model.SizeBytes, model.Sha256);
+        await _downloader.DownloadAsync(request, progress, cancellationToken).ConfigureAwait(false);
+
+        // The detector is small and every recognition needs it: it comes with the first model.
+        await InstallDetectorAsync(null, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task InstallDetectorAsync(IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+    {
+        var detector = SpeechDetectorModel.SileroVad;
+        if (_store.IsDetectorInstalled(detector))
+        {
+            return Task.CompletedTask;
+        }
+
+        var request = new DownloadRequest(detector.DownloadUri, _store.DetectorFileOf(detector), detector.SizeBytes, detector.Sha256);
 
         return _downloader.DownloadAsync(request, progress, cancellationToken);
     }

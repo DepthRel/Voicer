@@ -11,4 +11,11 @@ namespace Voicer.UI.Services.Transcription;
 /// <param name="ModelPath">The file of the model.</param>
 /// <param name="Device">The device the model runs on.</param>
 /// <param name="DeviceName">The name of the device as it is shown to the user.</param>
-public sealed record TranscriptionRequest(string SourcePath, SpeechModel Model, string ModelPath, ComputeDevice Device, string DeviceName);
+/// <param name="DetectorPath">The file of the detector of speech, or <see langword="null"/> to recognize the whole sound.</param>
+public sealed record TranscriptionRequest(
+    string SourcePath,
+    SpeechModel Model,
+    string ModelPath,
+    ComputeDevice Device,
+    string DeviceName,
+    string? DetectorPath = null);

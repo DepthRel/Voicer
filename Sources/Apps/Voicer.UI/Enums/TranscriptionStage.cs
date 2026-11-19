@@ -6,6 +6,11 @@ namespace Voicer.UI.Enums;
 public enum TranscriptionStage
 {
     /// <summary>
+    /// The detector of speech is being downloaded: once, before the first recognition that needs it.
+    /// </summary>
+    PreparingDetector,
+
+    /// <summary>
     /// The sound track is being extracted from the file.
     /// </summary>
     ExtractingAudio,

@@ -15,6 +15,7 @@ using Voicer.UI.Services.History;
 using Voicer.UI.Services.Summaries;
 using Voicer.UI.Services.Transcription;
 using Voicer.UI.Services.Worker;
+using Voicer.UI.ViewModels.Dialogs;
 using Voicer.UI.ViewModels.Formatting;
 using Voicer.UI.ViewModels.Items;
 
@@ -66,6 +67,16 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     private readonly IRecordSummaryService _summaries;
 
     /// <summary>
+    /// Checks a chosen file before the page takes it.
+    /// </summary>
+    private readonly ISourceFileInspector _inspector;
+
+    /// <summary>
+    /// Gives the recognition the detector of speech, downloading it once.
+    /// </summary>
+    private readonly ISpeechDetectorSource _detector;
+
+    /// <summary>
     /// The clock that measures how long a recognition took.
     /// </summary>
     private readonly TimeProvider _time;
@@ -106,12 +117,20 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     private int _summarySteps;
 
     /// <summary>
-    /// The file whose speech is recognized, or <see langword="null"/>.
+    /// The checked file whose speech is recognized, or <see langword="null"/>.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSource), nameof(SourceName), nameof(SourceDetails))]
+    [NotifyPropertyChangedFor(nameof(HasSource), nameof(SourcePath), nameof(SourceName), nameof(SourceDetails))]
     [NotifyCanExecuteChangedFor(nameof(RecognizeCommand), nameof(ClearSourceCommand))]
-    private string? _sourcePath;
+    private SourceFile? _source;
+
+    /// <summary>
+    /// Whether a chosen file is being checked.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTakeSource))]
+    [NotifyCanExecuteChangedFor(nameof(RecognizeCommand), nameof(BrowseCommand), nameof(ClearSourceCommand))]
+    private bool _isLoadingSource;
 
     /// <summary>
     /// The chosen model, or <see langword="null"/>.
@@ -137,7 +156,7 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// Whether a recognition runs.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanTakeSource))]
     [NotifyCanExecuteChangedFor(nameof(RecognizeCommand), nameof(CancelCommand), nameof(BrowseCommand), nameof(ClearSourceCommand), nameof(SummarizeCommand))]
     private bool _isBusy;
 
@@ -159,9 +178,16 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// The result of the last recognition, or <see langword="null"/>.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasResult), nameof(ResultSummary))]
+    [NotifyPropertyChangedFor(nameof(HasResult), nameof(ResultSummary), nameof(ShowsResultNotice))]
     [NotifyCanExecuteChangedFor(nameof(ShowResultCommand), nameof(SummarizeCommand))]
     private Transcript? _result;
+
+    /// <summary>
+    /// Whether the user closed the notice of the last result; a new result shows its notice again.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsResultNotice))]
+    private bool _isResultNoticeClosed;
 
     /// <summary>
     /// The problem to show, or <see langword="null"/>.
@@ -188,6 +214,8 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// <param name="viewer">Opens the window of a recognized text.</param>
     /// <param name="summaries">Writes and keeps the summaries.</param>
     /// <param name="ffmpeg">The locator of FFmpeg.</param>
+    /// <param name="inspector">Checks a chosen file before the page takes it.</param>
+    /// <param name="detector">Gives the recognition the detector of speech, downloading it once.</param>
     /// <param name="openSettings">Opens the settings.</param>
     /// <param name="time">The clock that measures a recognition; the system clock by default.</param>
     public TranscriptionViewModel(
@@ -200,10 +228,14 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
         IRecordViewer viewer,
         IRecordSummaryService summaries,
         IFfmpegLocator ffmpeg,
+        ISourceFileInspector inspector,
+        ISpeechDetectorSource detector,
         Action openSettings,
         TimeProvider? time = null)
         : base(localizer)
     {
+        _inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
+        _detector = detector ?? throw new ArgumentNullException(nameof(detector));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _worker = worker ?? throw new ArgumentNullException(nameof(worker));
         _runner = runner ?? throw new ArgumentNullException(nameof(runner));
@@ -229,31 +261,32 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// <summary>
     /// Gets a value indicating whether a file is chosen.
     /// </summary>
-    public bool HasSource => SourcePath is not null;
+    public bool HasSource => Source is not null;
+
+    /// <summary>
+    /// Gets the full path of the chosen file, or <see langword="null"/>.
+    /// </summary>
+    public string? SourcePath => Source?.FullPath;
 
     /// <summary>
     /// Gets the name of the chosen file.
     /// </summary>
-    public string SourceName => SourcePath is null ? string.Empty : Path.GetFileName(SourcePath);
+    public string SourceName => Source is null ? string.Empty : Path.GetFileName(Source.FullPath);
 
     /// <summary>
-    /// Gets the size and the folder of the chosen file.
+    /// Gets the size and the folder of the chosen file, as they were when it was checked.
     /// </summary>
-    public string SourceDetails
-    {
-        get
-        {
-            if (SourcePath is null)
-            {
-                return string.Empty;
-            }
+    public string SourceDetails => Source is null
+        ? string.Empty
+        : Localizer.Format(
+            "Transcription.SourceDetails",
+            DisplayText.Bytes(Localizer, Source.SizeBytes),
+            Path.GetDirectoryName(Source.FullPath) ?? string.Empty);
 
-            var file = new FileInfo(SourcePath);
-            var size = file.Exists ? DisplayText.Bytes(Localizer, file.Length) : string.Empty;
-
-            return Localizer.Format("Transcription.SourceDetails", size, file.DirectoryName ?? string.Empty);
-        }
-    }
+    /// <summary>
+    /// Gets a value indicating whether a file can be chosen now: nothing runs and no file is being checked.
+    /// </summary>
+    public bool CanTakeSource => !IsBusy && !IsLoadingSource;
 
     /// <summary>
     /// Gets a value indicating whether a model is installed.
@@ -268,13 +301,14 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// <summary>
     /// Gets a value indicating whether the progress of the stage cannot be measured (the model is loading).
     /// </summary>
-    public bool IsIndeterminate => Stage == TranscriptionStage.LoadingModel;
+    public bool IsIndeterminate => Stage is TranscriptionStage.LoadingModel or TranscriptionStage.PreparingDetector;
 
     /// <summary>
     /// Gets what the recognition is doing, in words.
     /// </summary>
     public string StageText => Stage switch
     {
+        TranscriptionStage.PreparingDetector => Localizer.Get("Transcription.Stage.PreparingDetector"),
         TranscriptionStage.ExtractingAudio => Localizer.Format("Transcription.Stage.ExtractingAudio", Progress),
         TranscriptionStage.LoadingModel => Localizer.Get("Transcription.Stage.LoadingModel"),
         TranscriptionStage.Recognizing => Localizer.Format("Transcription.Stage.Recognizing", Progress),
@@ -287,6 +321,11 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// Gets a value indicating whether a result is there.
     /// </summary>
     public bool HasResult => Result is not null;
+
+    /// <summary>
+    /// Gets a value indicating whether the notice of the result is shown: there is a result and its notice is not closed.
+    /// </summary>
+    public bool ShowsResultNotice => HasResult && !IsResultNoticeClosed;
 
     /// <summary>
     /// Gets how the last result was made, in words.
@@ -325,29 +364,46 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     }
 
     /// <summary>
-    /// Takes a file to recognize, when its kind can hold sound.
+    /// Takes a file to recognize, when its kind can hold sound and it can be read; while it is checked the drop area
+    /// shows it, and a file that cannot be taken is reported instead of breaking the page.
     /// </summary>
     /// <param name="path">The file.</param>
     /// <returns><see langword="true"/> when the file was taken.</returns>
-    public bool TrySetSource(string? path)
+    public async Task<bool> SetSourceAsync(string? path)
     {
-        if (IsBusy || string.IsNullOrWhiteSpace(path))
+        if (!CanTakeSource || string.IsNullOrWhiteSpace(path))
         {
             return false;
         }
 
+        var name = Path.GetFileName(path);
         if (!MediaFormats.IsSupported(path))
         {
-            ShowError(Localizer.Format("Transcription.Unsupported", Path.GetFileName(path)), false);
+            ShowError(Localizer.Format("Transcription.Unsupported", name), false);
 
             return false;
         }
 
         ErrorMessage = null;
-        SourcePath = Path.GetFullPath(path);
-        Result = null;
+        IsLoadingSource = true;
+        try
+        {
+            var file = await _inspector.InspectAsync(path, CancellationToken.None);
+            Result = null;
+            Source = file;
 
-        return true;
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            ShowError(Localizer.Format("Transcription.SourceFailed", name, Localizer.Describe(ex)), false);
+
+            return false;
+        }
+        finally
+        {
+            IsLoadingSource = false;
+        }
     }
 
     /// <summary>
@@ -396,14 +452,14 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     /// Picks a file to recognize.
     /// </summary>
     /// <returns>A task that completes when the picker is closed.</returns>
-    [RelayCommand(CanExecute = nameof(IsIdle))]
+    [RelayCommand(CanExecute = nameof(CanTakeSource))]
     private async Task BrowseAsync()
     {
         var path = await _dialogs.PickMediaFileAsync(
             Localizer.Get("Transcription.PickerTitle"),
             Localizer.Get("Transcription.PickerFilter"),
             MediaFormats.AllExtensions);
-        TrySetSource(path);
+        await SetSourceAsync(path);
     }
 
     /// <summary>
@@ -412,17 +468,17 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     [RelayCommand(CanExecute = nameof(CanClearSource))]
     private void ClearSource()
     {
-        SourcePath = null;
+        Source = null;
         Result = null;
     }
 
     /// <summary>
     /// Tells whether the chosen file can be forgotten.
     /// </summary>
-    /// <returns><see langword="true"/> when a file is chosen and no recognition runs.</returns>
+    /// <returns><see langword="true"/> when a file is chosen, it is not being checked and no recognition runs.</returns>
     private bool CanClearSource()
     {
-        return HasSource && !IsBusy;
+        return HasSource && CanTakeSource;
     }
 
     /// <summary>
@@ -449,7 +505,6 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
         }
 
         var device = SelectedDevice!;
-        var request = new TranscriptionRequest(SourcePath!, SelectedModel!, _store.FileOf(SelectedModel!), device.Device, device.Title);
         var started = _time.GetTimestamp();
 
         Result = null;
@@ -459,6 +514,8 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
         _recognition = new CancellationTokenSource();
         try
         {
+            var (detector, detectorFailure) = await PrepareDetectorAsync(_recognition.Token);
+            var request = new TranscriptionRequest(SourcePath!, SelectedModel!, _store.FileOf(SelectedModel!), device.Device, device.Title, detector);
             var progress = new Progress<TranscriptionProgress>(p =>
             {
                 if (IsBusy)
@@ -467,9 +524,15 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
                     Progress = p.Percent;
                 }
             });
+
             var transcript = await _runner.RunAsync(request, progress, _recognition.Token);
             _elapsed = _time.GetElapsedTime(started);
             Result = transcript;
+            if (detectorFailure is not null)
+            {
+                ShowError(Localizer.Format("Transcription.DetectorMissing", Localizer.Describe(detectorFailure)), false);
+            }
+
             await SaveAsync(transcript, _recognition.Token);
         }
         catch (OperationCanceledException)
@@ -490,21 +553,54 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     }
 
     /// <summary>
-    /// Tells whether the recognition can start: a file, a model and a device are chosen and nothing runs.
+    /// Makes the detector of speech ready, downloading it once when it is missing; a detector that cannot be had does
+    /// not stop the recognition, which then hears the whole sound.
     /// </summary>
-    /// <returns><see langword="true"/> when everything is chosen.</returns>
-    private bool CanRecognize()
+    /// <param name="cancellationToken">Stops the download.</param>
+    /// <returns>The file of the detector, or <see langword="null"/> with the reason it could not be had.</returns>
+    private async Task<(string? File, Exception? Failure)> PrepareDetectorAsync(CancellationToken cancellationToken)
     {
-        return HasSource && SelectedModel is not null && SelectedDevice is not null && !IsBusy;
+        if (!_detector.IsReady)
+        {
+            Stage = TranscriptionStage.PreparingDetector;
+        }
+
+        try
+        {
+            return (await _detector.PrepareAsync(cancellationToken), null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            return (null, ex);
+        }
     }
 
     /// <summary>
-    /// Stops the recognition.
+    /// Tells whether the recognition can start: a file, a model and a device are chosen and nothing runs.
     /// </summary>
-    [RelayCommand(CanExecute = nameof(IsBusy))]
-    private void Cancel()
+    /// <returns><see langword="true"/> when everything is chosen, no file is being checked and nothing runs.</returns>
+    private bool CanRecognize()
     {
-        _recognition?.Cancel();
+        return HasSource && SelectedModel is not null && SelectedDevice is not null && CanTakeSource;
+    }
+
+    /// <summary>
+    /// Stops the recognition or the summary once the user confirms it: an hour of speech is not thrown away by a slip
+    /// of the mouse. Work that ended while the question was open is kept.
+    /// </summary>
+    /// <returns>A task that completes when the question is answered.</returns>
+    [RelayCommand(CanExecute = nameof(IsBusy))]
+    private async Task CancelAsync()
+    {
+        var summary = Stage == TranscriptionStage.Summarizing;
+        var question = new ConfirmDialogViewModel(
+            Localizer.Get(summary ? "Transcription.StopSummaryTitle" : "Transcription.StopTitle"),
+            Localizer.Get(summary ? "Transcription.StopSummaryMessage" : "Transcription.StopMessage"),
+            Localizer.Get("Transcription.StopConfirm"));
+        if (await _dialogs.ConfirmAsync(question))
+        {
+            _recognition?.Cancel();
+        }
     }
 
     /// <summary>
@@ -650,6 +746,24 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     private void OpenSettings()
     {
         _openSettings();
+    }
+
+    /// <summary>
+    /// Shows the notice of every new result, even after the previous one was closed.
+    /// </summary>
+    /// <param name="value">The new result.</param>
+    partial void OnResultChanged(Transcript? value)
+    {
+        IsResultNoticeClosed = false;
+    }
+
+    /// <summary>
+    /// Closes the notice of the result; the result itself stays.
+    /// </summary>
+    [RelayCommand]
+    private void CloseResultNotice()
+    {
+        IsResultNoticeClosed = true;
     }
 
     /// <summary>

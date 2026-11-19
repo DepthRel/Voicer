@@ -109,7 +109,7 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="items:HistoryItemViewModel">
             <Border Classes="card" Margin="0,0,0,10" Padding="18,14" Cursor="Hand" DoubleTapped="OnRecordDoubleTapped">
-              <Grid ColumnDefinitions="Auto,*,Auto">
+              <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                 <Border Classes="badge" VerticalAlignment="Top" ToolTip.Tip="{Binding KindText}">
                   <controls:IconView IconKey="{Binding KindIcon}" />
                 </Border>
@@ -127,7 +127,9 @@
                   <TextBlock Classes="muted" Text="{Binding Details}" TextWrapping="Wrap" />
                   <TextBlock Classes="secondary" Text="{Binding Preview}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <!-- A thin line keeps the actions apart from the text of the record. -->
+                <Border Grid.Column="2" Classes="vertical-divider" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                   <Button Classes="outline" Command="{Binding OpenCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                       <controls:IconView Classes="small" IconKey="Icon.Eye" />

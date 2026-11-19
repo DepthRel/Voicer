@@ -22,6 +22,7 @@ public interface IWorkerClient
     /// <param name="modelPath">The file of the model.</param>
     /// <param name="audioPath">The WAV file (16 kHz, mono, 16-bit).</param>
     /// <param name="deviceIndex">The index of the video card, or <c>-1</c> for the processor.</param>
+    /// <param name="detectorPath">The file of the detector of speech, or <see langword="null"/> to recognize the whole sound.</param>
     /// <param name="progress">Receives the progress events of the worker, or <see langword="null"/>.</param>
     /// <param name="cancellationToken">Stops the worker.</param>
     /// <returns>What the worker recognized.</returns>
@@ -30,6 +31,7 @@ public interface IWorkerClient
         string modelPath,
         string audioPath,
         int deviceIndex,
+        string? detectorPath,
         IProgress<WorkerEvent>? progress,
         CancellationToken cancellationToken);
 }

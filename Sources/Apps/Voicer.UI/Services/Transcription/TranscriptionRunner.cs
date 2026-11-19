@@ -74,6 +74,7 @@ public sealed class TranscriptionRunner : ITranscriptionRunner
                 request.ModelPath,
                 audio,
                 request.Device.Index,
+                request.DetectorPath,
                 new SyncProgress<WorkerEvent>(e => progress?.Report(ToProgress(e))),
                 cancellationToken).ConfigureAwait(false);
 

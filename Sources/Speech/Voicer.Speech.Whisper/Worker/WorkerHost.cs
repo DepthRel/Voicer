@@ -194,12 +194,20 @@ public sealed class WorkerHost
             return EXIT_FAILED;
         }
 
+        if (commandLine.DetectorPath is { } detector && !File.Exists(detector))
+        {
+            WriteError(WorkerErrorCode.ModelNotFound, detector);
+
+            return EXIT_FAILED;
+        }
+
         try
         {
             var language = await _engine.TranscribeAsync(
                 commandLine.ModelPath!,
                 commandLine.AudioPath!,
                 commandLine.DeviceIndex,
+                commandLine.DetectorPath,
                 new Listener(this),
                 cancellationToken).ConfigureAwait(false);
             Write(new WorkerEvent(WorkerEventKind.Done) { Language = language });

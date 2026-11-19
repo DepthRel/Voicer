@@ -160,28 +160,18 @@
         </StackPanel>
       </Border>
 
-      <!-- 3. The generation: the button, then the progress, then the result. -->
-      <Grid ColumnDefinitions="Auto,*">
-        <Button Classes="accent" Padding="22,10" MinHeight="42"
-                Command="{Binding GenerateCommand}"
-                IsVisible="{Binding IsIdle}">
-          <StackPanel Orientation="Horizontal" Spacing="9">
-            <controls:IconView IconKey="Icon.Speaker" Foreground="White" />
-            <TextBlock Text="{loc:Loc Generation.Generate}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
-        <Button Classes="outline" Padding="18,10" MinHeight="42"
-                Command="{Binding CancelCommand}"
-                IsVisible="{Binding IsBusy}">
-          <StackPanel Orientation="Horizontal" Spacing="9">
-            <controls:IconView IconKey="Icon.Stop" />
-            <TextBlock Text="{loc:Loc Common.Cancel}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
-      </Grid>
+      <!-- 3. The generation: the wide button, then the progress with its cancel, then the result. -->
+      <Button Classes="hero"
+              Command="{Binding GenerateCommand}"
+              IsVisible="{Binding IsIdle}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <controls:IconView IconKey="Icon.Speaker" />
+          <TextBlock Text="{loc:Loc Generation.Generate}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
 
       <Border Classes="card" IsVisible="{Binding IsBusy}">
-        <Grid ColumnDefinitions="Auto,*">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
           <!-- A wave of light: the voice is being made. -->
           <StackPanel Classes="wave" Orientation="Horizontal" Spacing="4" Height="30" VerticalAlignment="Center" Margin="2,0,18,0"
                       IsVisible="{Binding IsBusy}">
@@ -191,17 +181,30 @@
             <Border Classes="wave-bar w4" />
             <Border Classes="wave-bar w5" />
           </StackPanel>
-          <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
+          <StackPanel Grid.Column="1" Spacing="10" Margin="0,0,18,0" VerticalAlignment="Center">
             <TextBlock Classes="secondary" Text="{Binding StageText}" />
             <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" IsIndeterminate="{Binding IsIndeterminate}" />
           </StackPanel>
+          <Border Grid.Column="2" Classes="vertical-divider" />
+          <Button Grid.Column="3" Classes="outline" Padding="16,8" VerticalAlignment="Center"
+                  Command="{Binding CancelCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <controls:IconView Classes="small" IconKey="Icon.Stop" />
+              <TextBlock Text="{loc:Loc Common.Cancel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </Grid>
       </Border>
 
-      <Border Classes="banner success" IsVisible="{Binding HasResult}">
-        <Grid ColumnDefinitions="Auto,*">
+      <!-- The notice of the result: it can be closed, the result and its player stay. -->
+      <Border Classes="banner success" IsVisible="{Binding ShowsResultNotice}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
           <controls:IconView IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" Margin="0,0,10,0" />
           <TextBlock Grid.Column="1" Text="{Binding ResultSummary}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="icon" Padding="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding CloseResultNoticeCommand}" ToolTip.Tip="{loc:Loc Common.Hide}" AutomationProperties.Name="{loc:Loc Common.Hide}">
+            <controls:IconView Classes="small" IconKey="Icon.X" />
+          </Button>
         </Grid>
       </Border>
 

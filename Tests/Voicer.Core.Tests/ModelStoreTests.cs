@@ -89,6 +89,29 @@ public sealed class ModelStoreTests : IDisposable
     }
 
     /// <summary>
+    /// Deleting a quantization removes its file only; the folder of the family goes with the last file.
+    /// </summary>
+    [Fact]
+    public void Delete_RemovesTheFileAndThenTheEmptyFolder()
+    {
+        var store = new ModelStore(_root, [_model, _quantized]);
+        Directory.CreateDirectory(store.DirectoryOf(_model));
+        File.WriteAllBytes(store.FileOf(_model), [1, 2, 3, 4]);
+        File.WriteAllBytes(store.FileOf(_quantized), [1, 2]);
+
+        store.Delete(_model);
+
+        File.Exists(store.FileOf(_model)).Should().BeFalse();
+        store.Installed().Should().Equal(_quantized);
+
+        store.Delete(_quantized);
+        store.Delete(_quantized);
+
+        Directory.Exists(store.DirectoryOf(_model)).Should().BeFalse();
+        store.Installed().Should().BeEmpty();
+    }
+
+    /// <summary>
     /// The model downloaded before quantizations were offered, <c>Data/Models/whisper-large-v3/ggml-large-v3.bin</c>,
     /// is still found where it is.
     /// </summary>

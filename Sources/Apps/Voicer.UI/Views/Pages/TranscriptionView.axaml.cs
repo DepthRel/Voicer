@@ -42,7 +42,7 @@ public partial class TranscriptionView : UserControl
     /// <param name="e">The drag.</param>
     private void OnDragEnter(object? sender, DragEventArgs e)
     {
-        var accepted = HasFile(e) && ViewModel?.IsIdle == true;
+        var accepted = HasFile(e) && ViewModel?.CanTakeSource == true;
         DropZone.Classes.Set(DRAG_OVER_CLASS, accepted);
         e.DragEffects = accepted ? DragDropEffects.Copy : DragDropEffects.None;
     }
@@ -54,7 +54,7 @@ public partial class TranscriptionView : UserControl
     /// <param name="e">The drag.</param>
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects = HasFile(e) && ViewModel?.IsIdle == true ? DragDropEffects.Copy : DragDropEffects.None;
+        e.DragEffects = HasFile(e) && ViewModel?.CanTakeSource == true ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
     /// <summary>
@@ -76,7 +76,10 @@ public partial class TranscriptionView : UserControl
     {
         DropZone.Classes.Set(DRAG_OVER_CLASS, false);
         var file = e.DataTransfer.TryGetFiles()?.FirstOrDefault()?.TryGetLocalPath();
-        ViewModel?.TrySetSource(file);
+        if (ViewModel is { } page)
+        {
+            _ = page.SetSourceAsync(file);
+        }
     }
 
     /// <summary>

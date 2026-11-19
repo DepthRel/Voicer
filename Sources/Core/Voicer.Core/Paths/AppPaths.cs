@@ -78,6 +78,11 @@ public sealed class AppPaths
     public string DatabaseFile => Path.Combine(DataDirectory, "voicer.db");
 
     /// <summary>
+    /// Gets the log of the unexpected failures of the window: what went wrong and where, for a report of the problem.
+    /// </summary>
+    public string ErrorLogFile => Path.Combine(DataDirectory, "errors.log");
+
+    /// <summary>
     /// Chooses the data folder.
     /// </summary>
     /// <param name="baseDirectory">The folder of the program.</param>

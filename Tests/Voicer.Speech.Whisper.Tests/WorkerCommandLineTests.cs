@@ -20,6 +20,17 @@ public sealed class WorkerCommandLineTests
     }
 
     /// <summary>
+    /// A recognition may name the detector of speech; without it the whole sound is recognized.
+    /// </summary>
+    [Fact]
+    public void TryParse_ReadsTheDetectorOfSpeech()
+    {
+        WorkerCommandLine.TryParse(["transcribe", "--model", "m.bin", "--audio", "a.wav", "--device", "1", "--vad", "vad.bin"], out var commandLine, out _).Should().BeTrue();
+
+        commandLine.Should().Be(new WorkerCommandLine("transcribe", "m.bin", "a.wav", 1, "vad.bin"));
+    }
+
+    /// <summary>
     /// The processor is the device when none is named.
     /// </summary>
     [Fact]

@@ -1,3 +1,5 @@
+using Voicer.Core.Models;
+
 namespace Voicer.Core.Synthesis;
 
 /// <summary>
@@ -54,6 +56,14 @@ public sealed class VoiceModelStore : IVoiceModelStore
 
             return info.Exists && info.Length == f.SizeBytes;
         });
+    }
+
+    /// <inheritdoc />
+    public void Delete(VoiceModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        ModelFiles.Delete(model.Files.Select(file => FileOf(model, file)), DirectoryOf(model));
     }
 
     /// <inheritdoc />

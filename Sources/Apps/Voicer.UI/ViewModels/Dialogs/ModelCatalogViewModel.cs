@@ -46,14 +46,15 @@ public sealed partial class ModelCatalogViewModel : LocalizedViewModel
 
         foreach (var model in models)
         {
-            model.Installed += OnModelInstalled;
+            model.Installed += OnModelChanged;
+            model.Removed += OnModelChanged;
         }
     }
 
     /// <summary>
-    /// Raised when a model of the catalog has been downloaded and checked.
+    /// Raised when a model of the catalog has been downloaded and checked, or deleted.
     /// </summary>
-    public event EventHandler? Installed;
+    public event EventHandler? Changed;
 
     /// <summary>
     /// Gets the cards of the models.
@@ -93,14 +94,14 @@ public sealed partial class ModelCatalogViewModel : LocalizedViewModel
     }
 
     /// <summary>
-    /// Follows a model that was downloaded.
+    /// Follows a model that was downloaded or deleted.
     /// </summary>
     /// <param name="sender">The card of the model.</param>
     /// <param name="e">The event arguments.</param>
-    private void OnModelInstalled(object? sender, EventArgs e)
+    private void OnModelChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(HasInstalled));
-        Installed?.Invoke(this, EventArgs.Empty);
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 }

@@ -12,6 +12,7 @@ using Voicer.UI.Services.History;
 using Voicer.UI.Services.Summaries;
 using Voicer.UI.Services.Transcription;
 using Voicer.UI.Services.Worker;
+using Voicer.UI.ViewModels.Dialogs;
 using Voicer.UI.ViewModels.Pages;
 
 namespace Voicer.UI.Tests;
@@ -57,6 +58,21 @@ public sealed class TranscriptionViewModelTests
     private readonly IRecordSummaryService _summaries = Substitute.For<IRecordSummaryService>();
 
     /// <summary>
+    /// The dialogs: the file picker and the questions.
+    /// </summary>
+    private readonly IDialogService _dialogs = Substitute.For<IDialogService>();
+
+    /// <summary>
+    /// Checks the chosen files; every file is taken as it is named unless a test says otherwise.
+    /// </summary>
+    private readonly ISourceFileInspector _inspector = Substitute.For<ISourceFileInspector>();
+
+    /// <summary>
+    /// Gives the recognition the detector of speech; it is ready unless a test says otherwise.
+    /// </summary>
+    private readonly ISpeechDetectorSource _detector = Substitute.For<ISpeechDetectorSource>();
+
+    /// <summary>
     /// The page under test.
     /// </summary>
     private readonly TranscriptionViewModel _page;
@@ -66,16 +82,21 @@ public sealed class TranscriptionViewModelTests
     /// </summary>
     public TranscriptionViewModelTests()
     {
+        _inspector.InspectAsync(default!, default).ReturnsForAnyArgs(call => call.Arg<string>() is { } path ? new SourceFile(Path.GetFullPath(path), 1024) : null!);
+        _detector.IsReady.Returns(true);
+        _detector.PrepareAsync(default).ReturnsForAnyArgs("vad.bin");
         _page = new TranscriptionViewModel(
             TestTexts.English,
             _store,
             _worker,
             _runner,
-            Substitute.For<IDialogService>(),
+            _dialogs,
             _keeper,
             _viewer,
             _summaries,
             _ffmpeg,
+            _inspector,
+            _detector,
             () => { });
     }
 
@@ -90,7 +111,7 @@ public sealed class TranscriptionViewModelTests
         _worker.ListDevicesAsync(default).ReturnsForAnyArgs([new ComputeDevice(ComputeDeviceKind.Cpu, -1, "CPU", 1, 2)]);
 
         _page.RecognizeCommand.CanExecute(null).Should().BeFalse();
-        _page.TrySetSource("talk.mp3").Should().BeTrue();
+        (await _page.SetSourceAsync("talk.mp3")).Should().BeTrue();
         _page.RecognizeCommand.CanExecute(null).Should().BeFalse();
 
         _page.RefreshModels();
@@ -139,13 +160,56 @@ public sealed class TranscriptionViewModelTests
     /// <summary>
     /// A file that cannot hold sound is refused with a message.
     /// </summary>
+    /// <returns>A task that completes with the test.</returns>
     [Fact]
-    public void TrySetSource_RefusesOtherFiles()
+    public async Task SetSource_RefusesOtherFiles()
     {
-        _page.TrySetSource("notes.txt").Should().BeFalse();
+        (await _page.SetSourceAsync("notes.txt")).Should().BeFalse();
 
         _page.HasSource.Should().BeFalse();
         _page.ErrorMessage.Should().Be(TestTexts.English.Format("Transcription.Unsupported", "notes.txt"));
+        await _inspector.DidNotReceiveWithAnyArgs().InspectAsync(default!, default);
+    }
+
+    /// <summary>
+    /// A file that cannot be read is reported on the page, and the page stays as it was instead of failing.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task SetSource_ReportsAFileThatCannotBeRead()
+    {
+        _inspector.InspectAsync(default!, default).ReturnsForAnyArgs(Task.FromException<SourceFile>(new IOException("locked")));
+
+        (await _page.SetSourceAsync("talk.mp3")).Should().BeFalse();
+
+        _page.HasSource.Should().BeFalse();
+        _page.IsLoadingSource.Should().BeFalse();
+        _page.ErrorMessage.Should().Be(TestTexts.English.Format("Transcription.SourceFailed", "talk.mp3", "locked"));
+    }
+
+    /// <summary>
+    /// While a file is checked the page says so, takes no other file and cannot start; then it shows the file.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task SetSource_ShowsTheCheckWhileItRuns()
+    {
+        var check = new TaskCompletionSource<SourceFile>();
+        _inspector.InspectAsync(default!, default).ReturnsForAnyArgs(check.Task);
+
+        var taking = _page.SetSourceAsync("talk.mp3");
+
+        _page.IsLoadingSource.Should().BeTrue();
+        _page.CanTakeSource.Should().BeFalse();
+        _page.BrowseCommand.CanExecute(null).Should().BeFalse();
+        (await _page.SetSourceAsync("other.mp3")).Should().BeFalse();
+
+        check.SetResult(new SourceFile(Path.GetFullPath("talk.mp3"), 3 * 1024 * 1024));
+        (await taking).Should().BeTrue();
+
+        _page.IsLoadingSource.Should().BeFalse();
+        _page.SourceName.Should().Be("talk.mp3");
+        _page.SourceDetails.Should().Contain(TestTexts.English.Format("Units.Megabytes", 3.0));
     }
     /// <summary>
     /// A recognized text is kept in the history, and the result opens from there.
@@ -264,6 +328,103 @@ public sealed class TranscriptionViewModelTests
     }
 
     /// <summary>
+    /// The cancel button asks first: a declined question lets the recognition run on, a confirmed one stops it and
+    /// leaves no result.
+    /// </summary>
+    /// <param name="confirmed">Whether the user confirms the question.</param>
+    /// <returns>A task that completes with the test.</returns>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Cancel_AsksBeforeStopping(bool confirmed)
+    {
+        var transcript = await PrepareRecognitionAsync();
+        var running = new TaskCompletionSource<Transcript>(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationToken token = default;
+        _runner.RunAsync(default!, default, default).ReturnsForAnyArgs(call =>
+        {
+            token = call.ArgAt<CancellationToken>(2);
+            token.Register(() => running.TrySetCanceled(token));
+
+            return running.Task;
+        });
+        _keeper.KeepAsync(default!, default, default).ReturnsForAnyArgs(new KeptRecord(7, true, null));
+        _dialogs.ConfirmAsync(default!).ReturnsForAnyArgs(confirmed);
+
+        var recognition = _page.RecognizeCommand.ExecuteAsync(null);
+        await _page.CancelCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).ConfirmAsync(Arg.Is<ConfirmDialogViewModel>(q => q.Title == TestTexts.English.Get("Transcription.StopTitle")));
+        token.IsCancellationRequested.Should().Be(confirmed);
+        if (!confirmed)
+        {
+            _page.IsBusy.Should().BeTrue();
+            running.SetResult(transcript);
+        }
+
+        await recognition;
+        _page.IsBusy.Should().BeFalse();
+        _page.HasResult.Should().Be(!confirmed);
+    }
+
+    /// <summary>
+    /// The recognition hears only the speech: the detector of speech goes with the request.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Recognize_UsesTheDetectorOfSpeech()
+    {
+        var transcript = await PrepareRecognitionAsync();
+        _keeper.KeepAsync(default!, default, default).ReturnsForAnyArgs(new KeptRecord(7, true, null));
+
+        await _page.RecognizeCommand.ExecuteAsync(null);
+
+        await _runner.Received(1).RunAsync(Arg.Is<TranscriptionRequest>(r => r.DetectorPath == "vad.bin"), Arg.Any<IProgress<TranscriptionProgress>?>(), Arg.Any<CancellationToken>());
+        _page.Result.Should().Be(transcript);
+        _page.HasError.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A detector that cannot be downloaded does not stop the recognition: the whole sound is recognized and the page
+    /// says why phrases may be made up.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Recognize_WithoutTheDetector_RecognizesAndSaysSo()
+    {
+        var transcript = await PrepareRecognitionAsync();
+        _keeper.KeepAsync(default!, default, default).ReturnsForAnyArgs(new KeptRecord(7, true, null));
+        _detector.PrepareAsync(default).ReturnsForAnyArgs(Task.FromException<string>(new HttpRequestException("offline")));
+
+        await _page.RecognizeCommand.ExecuteAsync(null);
+
+        await _runner.Received(1).RunAsync(Arg.Is<TranscriptionRequest>(r => r.DetectorPath == null), Arg.Any<IProgress<TranscriptionProgress>?>(), Arg.Any<CancellationToken>());
+        _page.Result.Should().Be(transcript);
+        _page.ErrorMessage.Should().Be(TestTexts.English.Format("Transcription.DetectorMissing", "offline"));
+    }
+
+    /// <summary>
+    /// The notice of a result can be closed; the result stays, and the next result shows its notice again.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task ResultNotice_ClosesAndComesBackWithTheNextResult()
+    {
+        await PrepareRecognitionAsync();
+        _keeper.KeepAsync(default!, default, default).ReturnsForAnyArgs(new KeptRecord(7, true, null));
+        await _page.RecognizeCommand.ExecuteAsync(null);
+        _page.ShowsResultNotice.Should().BeTrue();
+
+        _page.CloseResultNoticeCommand.Execute(null);
+
+        _page.ShowsResultNotice.Should().BeFalse();
+        _page.HasResult.Should().BeTrue();
+
+        await _page.RecognizeCommand.ExecuteAsync(null);
+        _page.ShowsResultNotice.Should().BeTrue();
+    }
+
+    /// <summary>
     /// Makes everything a recognition needs ready: a file, an installed model, FFmpeg, a device and the runner's result.
     /// </summary>
     /// <returns>The text the runner recognizes.</returns>
@@ -278,7 +439,7 @@ public sealed class TranscriptionViewModelTests
         _worker.ListDevicesAsync(default).ReturnsForAnyArgs([new ComputeDevice(ComputeDeviceKind.Cpu, -1, "CPU", 1, 2)]);
         _runner.RunAsync(default!, default, default).ReturnsForAnyArgs(transcript);
 
-        _page.TrySetSource("talk.mp3");
+        await _page.SetSourceAsync("talk.mp3");
         _page.RefreshModels();
         await _page.LoadDevicesAsync();
 

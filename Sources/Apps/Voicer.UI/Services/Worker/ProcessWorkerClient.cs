@@ -53,6 +53,7 @@ public sealed class ProcessWorkerClient : IWorkerClient
         string modelPath,
         string audioPath,
         int deviceIndex,
+        string? detectorPath,
         IProgress<WorkerEvent>? progress,
         CancellationToken cancellationToken)
     {
@@ -68,6 +69,11 @@ public sealed class ProcessWorkerClient : IWorkerClient
             WorkerProtocol.AUDIO_OPTION, Path.GetFullPath(audioPath),
             WorkerProtocol.DEVICE_OPTION, deviceIndex.ToString(CultureInfo.InvariantCulture),
         ];
+        if (detectorPath is not null)
+        {
+            command = [.. command, WorkerProtocol.DETECTOR_OPTION, Path.GetFullPath(detectorPath)];
+        }
+
 
         await RunAsync(
             command,

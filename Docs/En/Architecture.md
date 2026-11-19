@@ -37,6 +37,23 @@ file (mp3, mp4, mkv, …)
 the history and opens it in the window of the record, which reads it back from the database and exports it to Markdown
 (`MarkdownTranscriptWriter`).
 
+`WhisperSpeechEngine` decodes every 30-second window of the sound on its own (`n_max_text_ctx = 0`). By default
+whisper.cpp gives each window the text of the previous ones as a prompt, and `no_context` clears that text only before
+the first window: a sentence the model once repeated, or made up over silence, then comes back in every following
+window to the end of a long file and pushes out the real speech. The windows are decoded by beam search of width 5,
+as `whisper-cli` does, with the fallback to a higher temperature (step 0.2) for a window that comes out repetitive
+(entropy below 2.4) or unsure (average log probability below -1). `RepetitionGuard` leaves out a piece of three words
+or more that repeats one of the last three pieces word for word.
+
+Before the model, a detector of speech finds where someone speaks: Silero VAD 6.2.0 in the ggml format
+(`SpeechDetectorModel`, 0.9 MB, pinned like every download, kept in `Data/Models/silero-vad`), run by whisper.cpp on
+the processor. `SpeechMap` joins the stretches of speech with pauses of 0.3 s, the model recognizes only them, and the
+times of every piece are turned back into those of the file. Silence, music and noise never reach the model, so it
+makes up nothing for them (Whisper writes "Thank you." over silence), and a long pause costs no time. A file without
+speech gives an empty text. The detector comes with the first Whisper model; a model downloaded before that gets it on
+the first recognition (`SpeechDetectorSource`). When it cannot be downloaded, the whole sound is recognized and the
+page says so.
+
 ## Why a worker process
 
 whisper.cpp runs in native code, on the drivers of the video card. A driver that fails (on the development machine an
@@ -189,6 +206,10 @@ one voice.
 `AppPaths` chooses the data folder: `--data <folder>`; otherwise `Data` next to the `voicer.portable` marker of a
 package; otherwise `Data` next to the program; and when that folder is not writable (Program Files, `/opt`), the
 profile of the user (`%LOCALAPPDATA%\Voicer\Data`, `~/.local/share/Voicer/Data`).
+
+A failure of the window that nothing expected does not end the application: `App` catches it on the dispatcher, writes
+it to `Data/errors.log` (`ErrorLog`: the moment, the type, the message and the stack; the file starts again past
+1 MB) and shows a notice with the path of the log, one at a time.
 
 ## Interface
 

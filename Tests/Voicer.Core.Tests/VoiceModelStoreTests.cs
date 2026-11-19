@@ -60,6 +60,23 @@ public sealed partial class VoiceModelStoreTests : IDisposable
     }
 
     /// <summary>
+    /// Deleting a model removes every one of its files and its folder.
+    /// </summary>
+    [Fact]
+    public void Delete_RemovesEveryFileAndTheFolder()
+    {
+        var store = new VoiceModelStore(_root, [_model]);
+        Directory.CreateDirectory(store.DirectoryOf(_model));
+        File.WriteAllBytes(store.FileOf(_model, _model.Weights), new byte[4]);
+        File.WriteAllBytes(store.FileOf(_model, _model.Projector), new byte[2]);
+
+        store.Delete(_model);
+
+        store.IsInstalled(_model).Should().BeFalse();
+        Directory.Exists(store.DirectoryOf(_model)).Should().BeFalse();
+    }
+
+    /// <summary>
     /// Every model of the catalog is pinned: HTTPS from a fixed revision, an exact size and a SHA-256; its folder name
     /// is safe, its default voice and language are its own.
     /// </summary>

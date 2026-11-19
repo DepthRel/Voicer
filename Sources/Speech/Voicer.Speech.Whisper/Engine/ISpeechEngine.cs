@@ -11,6 +11,10 @@ public interface ISpeechEngine
     /// <param name="modelPath">The file of the model.</param>
     /// <param name="audioPath">The WAV file.</param>
     /// <param name="deviceIndex">The index of the video card, or <c>-1</c> for the processor.</param>
+    /// <param name="detectorPath">
+    /// The file of the detector of speech: only the stretches where someone speaks are recognized, and the times stay
+    /// those of the file; <see langword="null"/> recognizes the whole sound.
+    /// </param>
     /// <param name="listener">Receives the progress and the recognized pieces as they come.</param>
     /// <param name="cancellationToken">Stops the recognition.</param>
     /// <returns>The language the model detected, or <see langword="null"/>.</returns>
@@ -19,6 +23,7 @@ public interface ISpeechEngine
         string modelPath,
         string audioPath,
         int deviceIndex,
+        string? detectorPath,
         ITranscriptionListener listener,
         CancellationToken cancellationToken);
 }

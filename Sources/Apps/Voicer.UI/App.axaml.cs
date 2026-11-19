@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Voicer.Audio;
 using Voicer.Audio.OpenAl;
 using Voicer.Core.Models;
@@ -23,6 +24,7 @@ using Voicer.Storage;
 using Voicer.UI.Enums;
 using Voicer.UI.Localization;
 using Voicer.UI.Services.Configuration;
+using Voicer.UI.Services.Diagnostics;
 using Voicer.UI.Services.Dialogs;
 using Voicer.UI.Services.Generation;
 using Voicer.UI.Services.History;
@@ -49,6 +51,11 @@ public sealed class App : Application
     /// The client of the downloads; it lives as long as the application.
     /// </summary>
     private HttpClient? _http;
+
+    /// <summary>
+    /// Whether the notice of an unexpected failure is on the screen, so a failure that repeats does not stack them.
+    /// </summary>
+    private bool _showingFailure;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="App"/> class.
@@ -93,6 +100,7 @@ public sealed class App : Application
             language.Initialize();
 
             var window = new MainWindow();
+            GuardAgainstFailures(new ErrorLog(paths.ErrorLogFile), new AvaloniaDialogService(() => window));
             window.DataContext = Compose(paths, settings, language, () => window);
             desktop.MainWindow = window;
             desktop.Exit += (_, _) =>
@@ -103,6 +111,52 @@ public sealed class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Keeps the window open when an action fails in a way nobody expected: the failure is written to the log of the
+    /// data folder and shown to the user, one notice at a time, instead of ending the application. A failure of a task
+    /// nobody waited for is written to the log too.
+    /// </summary>
+    /// <param name="log">The log of the failures.</param>
+    /// <param name="dialogs">The dialogs that show the notice.</param>
+    private void GuardAgainstFailures(IErrorLog log, IDialogService dialogs)
+    {
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            log.Write(e.Exception);
+            e.SetObserved();
+        };
+
+        Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            e.Handled = true;
+            var written = log.Write(e.Exception);
+            if (_showingFailure)
+            {
+                return;
+            }
+
+            _showingFailure = true;
+            var notice = new ConfirmDialogViewModel(
+                Localizer.Get("Failure.Title"),
+                written
+                    ? Localizer.Format("Failure.MessageLogged", Localizer.Describe(e.Exception), log.FilePath)
+                    : Localizer.Format("Failure.Message", Localizer.Describe(e.Exception)),
+                Localizer.Get("Common.Close"),
+                IsNotice: true);
+            Dispatcher.UIThread.Post(async () =>
+            {
+                try
+                {
+                    await dialogs.ConfirmAsync(notice);
+                }
+                finally
+                {
+                    _showingFailure = false;
+                }
+            });
+        };
     }
 
     /// <summary>
@@ -163,6 +217,8 @@ public sealed class App : Application
             viewer,
             summaries,
             ffmpeg,
+            new SourceFileInspector(),
+            new SpeechDetectorSource(store, new ModelInstaller(downloader, store)),
             () => main.SelectTab(TabKey.Settings));
         var generation = new GenerationViewModel(
             Localizer,

@@ -22,10 +22,13 @@
         </StackPanel>
       </Grid>
 
-      <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+      <!-- A question: the action and a way back; a notice: one button that closes it. -->
+      <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" IsVisible="{Binding !IsNotice}">
         <Button Classes="danger" Content="{Binding ConfirmLabel}" Click="OnConfirmClick" />
-        <Button Classes="outline" Content="{loc:Loc Common.Cancel}" IsCancel="True" IsDefault="True" Click="OnCancelClick" />
+        <Button Classes="outline" Content="{loc:Loc Common.Cancel}" IsCancel="{Binding !IsNotice}" IsDefault="{Binding !IsNotice}" Click="OnCancelClick" />
       </StackPanel>
+      <Button Classes="outline" HorizontalAlignment="Right" Content="{Binding ConfirmLabel}" IsVisible="{Binding IsNotice}"
+              IsCancel="{Binding IsNotice}" IsDefault="{Binding IsNotice}" Click="OnCancelClick" />
     </StackPanel>
   </Panel>
 </Window>

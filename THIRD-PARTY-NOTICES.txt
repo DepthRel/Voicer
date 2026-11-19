@@ -43,6 +43,9 @@ Whisper models large-v3, large-v3-turbo,    MIT            OpenAI (weights, gith
   medium and small (ggml-*.bin, full                       ggml format and quantized by the whisper.cpp authors —
   precision and quantized: Q8_0, Q5_0,                     huggingface.co/ggerganov/whisper.cpp
   Q5_1)
+Silero VAD 6.2.0, the detector of speech    MIT            Silero Team — github.com/snakers4/silero-vad; converted to
+  (ggml-silero-v6.2.0.bin), downloaded                     the ggml format by the whisper.cpp authors —
+  with the first Whisper model                             huggingface.co/ggml-org/whisper-vad
 FFmpeg 9.0.2 "essentials" build (Windows)   GPL-3.0        The FFmpeg developers — ffmpeg.org; build by Gyan Doshi —
                                                            github.com/GyanD/codexffmpeg. The license text is put next to
                                                            the program (Data/Tools/FFmpeg/LICENSE.txt); the source code

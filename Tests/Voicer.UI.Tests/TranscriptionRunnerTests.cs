@@ -46,7 +46,8 @@ public sealed class TranscriptionRunnerTests : IDisposable
         SpeechModelCatalog.WhisperLargeV3,
         "model.bin",
         new ComputeDevice(ComputeDeviceKind.Gpu, 1, "RTX", 0, 0),
-        "RTX");
+        "RTX",
+        "vad.bin");
 
     /// <summary>
     /// Removes the temporary folder.
@@ -75,7 +76,7 @@ public sealed class TranscriptionRunnerTests : IDisposable
             }), Arg.Any<IProgress<double>?>(), Arg.Any<CancellationToken>())
             .Returns(TimeSpan.FromSeconds(5));
         var segment = new TranscriptSegment(TimeSpan.Zero, TimeSpan.FromSeconds(2), "Hi");
-        _worker.TranscribeAsync("model.bin", Arg.Any<string>(), 1, Arg.Any<IProgress<WorkerEvent>?>(), Arg.Any<CancellationToken>())
+        _worker.TranscribeAsync("model.bin", Arg.Any<string>(), 1, "vad.bin", Arg.Any<IProgress<WorkerEvent>?>(), Arg.Any<CancellationToken>())
             .Returns(new WorkerTranscription([segment], "en"));
         var stages = new List<TranscriptionStage>();
 
@@ -85,7 +86,7 @@ public sealed class TranscriptionRunnerTests : IDisposable
         transcript.Language.Should().Be("en");
         transcript.ModelName.Should().Be("Whisper Large v3 F16");
         transcript.DeviceName.Should().Be("RTX");
-        await _worker.Received(1).TranscribeAsync("model.bin", wav!, 1, Arg.Any<IProgress<WorkerEvent>?>(), Arg.Any<CancellationToken>());
+        await _worker.Received(1).TranscribeAsync("model.bin", wav!, 1, "vad.bin", Arg.Any<IProgress<WorkerEvent>?>(), Arg.Any<CancellationToken>());
         stages.Should().StartWith([TranscriptionStage.ExtractingAudio]).And.Contain(TranscriptionStage.LoadingModel);
         File.Exists(wav).Should().BeFalse();
     }
@@ -104,7 +105,7 @@ public sealed class TranscriptionRunnerTests : IDisposable
                 Directory.CreateDirectory(_temp);
                 File.WriteAllBytes(p, [1]);
             }), Arg.Any<IProgress<double>?>(), Arg.Any<CancellationToken>()).Returns(TimeSpan.FromSeconds(1));
-        _worker.TranscribeAsync(default!, default!, default, default, default)
+        _worker.TranscribeAsync(default!, default!, default, default, default, default)
             .ReturnsForAnyArgs(Task.FromException<WorkerTranscription>(new WorkerException("crash", null, 1)));
 
         var run = () => Runner().RunAsync(_request, null, CancellationToken.None);

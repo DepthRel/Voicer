@@ -191,9 +191,16 @@ public sealed partial class GenerationViewModel : PageViewModelBase, IDisposable
     /// The result of the last generation, or <see langword="null"/>.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasResult), nameof(ResultSummary))]
+    [NotifyPropertyChangedFor(nameof(HasResult), nameof(ResultSummary), nameof(ShowsResultNotice))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     private GenerationResult? _result;
+
+    /// <summary>
+    /// Whether the user closed the notice of the last result; a new result shows its notice again.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsResultNotice))]
+    private bool _isResultNoticeClosed;
 
     /// <summary>
     /// The player of the result, or <see langword="null"/>.
@@ -373,6 +380,11 @@ public sealed partial class GenerationViewModel : PageViewModelBase, IDisposable
     /// Gets a value indicating whether a result is there.
     /// </summary>
     public bool HasResult => Result is not null;
+
+    /// <summary>
+    /// Gets a value indicating whether the notice of the result is shown: there is a result and its notice is not closed.
+    /// </summary>
+    public bool ShowsResultNotice => HasResult && !IsResultNoticeClosed;
 
     /// <summary>
     /// Gets a value indicating whether the result can be listened to.
@@ -655,6 +667,24 @@ public sealed partial class GenerationViewModel : PageViewModelBase, IDisposable
     private void OpenSettings()
     {
         _openSettings();
+    }
+
+    /// <summary>
+    /// Shows the notice of every new result, even after the previous one was closed.
+    /// </summary>
+    /// <param name="value">The new result.</param>
+    partial void OnResultChanged(GenerationResult? value)
+    {
+        IsResultNoticeClosed = false;
+    }
+
+    /// <summary>
+    /// Closes the notice of the result; the result itself stays.
+    /// </summary>
+    [RelayCommand]
+    private void CloseResultNotice()
+    {
+        IsResultNoticeClosed = true;
     }
 
     /// <summary>

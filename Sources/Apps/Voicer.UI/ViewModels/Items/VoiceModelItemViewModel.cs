@@ -89,6 +89,12 @@ public sealed class VoiceModelItemViewModel : ModelCardViewModel
     }
 
     /// <inheritdoc />
+    protected override void DeleteFiles()
+    {
+        _store.Delete(Model);
+    }
+
+    /// <inheritdoc />
     protected override long ReceivedBytes()
     {
         var received = 0L;

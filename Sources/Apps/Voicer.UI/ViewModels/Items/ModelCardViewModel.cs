@@ -4,6 +4,7 @@ using Voicer.Downloads;
 using Voicer.Downloads.Enums;
 using Voicer.Localization;
 using Voicer.UI.Services.Dialogs;
+using Voicer.UI.ViewModels.Dialogs;
 using Voicer.UI.ViewModels.Formatting;
 
 namespace Voicer.UI.ViewModels.Items;
@@ -29,7 +30,7 @@ public abstract partial class ModelCardViewModel : LocalizedViewModel
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(HasStatus), nameof(DownloadLabel))]
-    [NotifyCanExecuteChangedFor(nameof(DownloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand), nameof(DeleteCommand))]
     private bool _isInstalled;
 
     /// <summary>
@@ -37,7 +38,7 @@ public abstract partial class ModelCardViewModel : LocalizedViewModel
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatusText), nameof(HasStatus), nameof(CanChooseVariant))]
-    [NotifyCanExecuteChangedFor(nameof(DownloadCommand), nameof(CancelCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DownloadCommand), nameof(CancelCommand), nameof(DeleteCommand))]
     private bool _isDownloading;
 
     /// <summary>
@@ -71,9 +72,19 @@ public abstract partial class ModelCardViewModel : LocalizedViewModel
     public event EventHandler? Installed;
 
     /// <summary>
+    /// Raised when the model has been deleted from the computer.
+    /// </summary>
+    public event EventHandler? Removed;
+
+    /// <summary>
     /// Gets the name of the model.
     /// </summary>
     public abstract string Name { get; }
+
+    /// <summary>
+    /// Gets the name of exactly the files on the disk, as the question before the deletion names them.
+    /// </summary>
+    public virtual string FullName => Name;
 
     /// <summary>
     /// Gets what the model is good at.
@@ -165,6 +176,13 @@ public abstract partial class ModelCardViewModel : LocalizedViewModel
     protected abstract bool CheckInstalled();
 
     /// <summary>
+    /// Deletes the files of the model from the disk.
+    /// </summary>
+    /// <exception cref="IOException">A file is in use or the disk failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">A file may not be deleted.</exception>
+    protected abstract void DeleteFiles();
+
+    /// <summary>
     /// Tells how much of the model an interrupted download has received.
     /// </summary>
     /// <returns>The received bytes, or <c>0</c>.</returns>
@@ -235,6 +253,51 @@ public abstract partial class ModelCardViewModel : LocalizedViewModel
     private void Cancel()
     {
         _download?.Cancel();
+    }
+
+    /// <summary>
+    /// Deletes the model from the computer once the user confirms it; a file in use is reported on the card.
+    /// </summary>
+    /// <returns>A task that completes when the model is deleted or kept.</returns>
+    [RelayCommand(CanExecute = nameof(CanDelete))]
+    private async Task DeleteAsync()
+    {
+        var question = new ConfirmDialogViewModel(
+            Localizer.Get("Models.DeleteTitle"),
+            Localizer.Format("Models.DeleteMessage", FullName, SizeText),
+            Localizer.Get("Models.DeleteConfirm"));
+        if (!await _dialogs.ConfirmAsync(question))
+        {
+            return;
+        }
+
+        Exception? failure = null;
+        try
+        {
+            await Task.Run(DeleteFiles);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            failure = ex;
+        }
+
+        // What is left on the disk decides: a file that could not go keeps the model installed.
+        RefreshState();
+        if (failure is not null)
+        {
+            Error = Localizer.Format("Models.DeleteFailed", Localizer.Describe(failure));
+        }
+
+        Removed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Tells whether the model can be deleted now.
+    /// </summary>
+    /// <returns><see langword="true"/> when it is downloaded and nothing is being downloaded.</returns>
+    private bool CanDelete()
+    {
+        return IsInstalled && !IsDownloading;
     }
 
     /// <summary>

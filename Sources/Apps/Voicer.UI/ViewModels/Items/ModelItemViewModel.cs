@@ -78,6 +78,9 @@ public sealed partial class ModelItemViewModel : ModelCardViewModel
     public override string Name => Model.Name;
 
     /// <inheritdoc />
+    public override string FullName => Localizer.Format("Models.VariantName", Model.Name, SelectedVariant.Label);
+
+    /// <inheritdoc />
     public override string Description => Localizer.Get(Model.DescriptionKey);
 
     /// <summary>
@@ -106,6 +109,12 @@ public sealed partial class ModelItemViewModel : ModelCardViewModel
         SelectedVariant.IsInstalled = _store.IsInstalled(SelectedVariant.Model);
 
         return SelectedVariant.IsInstalled;
+    }
+
+    /// <inheritdoc />
+    protected override void DeleteFiles()
+    {
+        _store.Delete(SelectedVariant.Model);
     }
 
     /// <inheritdoc />

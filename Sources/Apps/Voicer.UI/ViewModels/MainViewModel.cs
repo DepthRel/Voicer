@@ -102,8 +102,8 @@ public sealed partial class MainViewModel : ObservableObject
         _generation = generation ?? throw new ArgumentNullException(nameof(generation));
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        settings.SpeechModels.Installed += (_, _) => transcription.RefreshModels();
-        settings.VoiceModels.Installed += (_, _) => generation.RefreshModels();
+        settings.SpeechModels.Changed += (_, _) => transcription.RefreshModels();
+        settings.VoiceModels.Changed += (_, _) => generation.RefreshModels();
 
         OnPropertyChanged(nameof(CurrentPage));
         CurrentPage.Activate();

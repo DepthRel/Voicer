@@ -97,6 +97,10 @@
                               ToolTip.Tip="{loc:Loc Models.OpenFolder}" AutomationProperties.Name="{loc:Loc Models.OpenFolder}">
                         <controls:IconView IconKey="Icon.Folder" />
                       </Button>
+                      <Button Classes="icon delete" Command="{Binding DeleteCommand}" IsVisible="{Binding IsInstalled}"
+                              ToolTip.Tip="{loc:Loc Models.Delete}" AutomationProperties.Name="{loc:Loc Models.Delete}">
+                        <controls:IconView IconKey="Icon.Trash" />
+                      </Button>
                       <Button Classes="accent" Command="{Binding DownloadCommand}" IsVisible="{Binding !IsInstalled}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                           <controls:IconView Classes="small" IconKey="Icon.Download" Foreground="White" />

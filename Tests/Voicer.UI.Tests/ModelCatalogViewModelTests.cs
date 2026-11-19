@@ -84,7 +84,7 @@ public sealed class ModelCatalogViewModelTests
     {
         var catalog = Catalog();
         var installed = 0;
-        catalog.Installed += (_, _) => installed++;
+        catalog.Changed += (_, _) => installed++;
         var qwen = catalog.Models.Cast<VoiceModelItemViewModel>().Single(c => c.Model == VoiceModelCatalog.Qwen3Tts);
         _installer.InstallAsync(VoiceModelCatalog.Qwen3Tts, Arg.Any<IProgress<DownloadProgress>?>(), Arg.Any<CancellationToken>())
             .Returns(_ =>
@@ -99,6 +99,65 @@ public sealed class ModelCatalogViewModelTests
         qwen.IsInstalled.Should().BeTrue();
         installed.Should().Be(1);
         catalog.Summary.Should().Be(TestTexts.Russian.Format("Models.Summary", 2, VoiceModelCatalog.All.Count));
+    }
+
+    /// <summary>
+    /// A confirmed deletion names the model in the question, removes its files and tells the settings and the pages.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Delete_AfterConfirmation_RemovesTheModel()
+    {
+        var catalog = Catalog();
+        var changed = 0;
+        catalog.Changed += (_, _) => changed++;
+        var kokoro = catalog.Models.Cast<VoiceModelItemViewModel>().Single(c => c.Model == VoiceModelCatalog.Kokoro);
+        _dialogs.ConfirmAsync(default!).ReturnsForAnyArgs(true);
+        _store.When(s => s.Delete(VoiceModelCatalog.Kokoro)).Do(_ => _store.IsInstalled(VoiceModelCatalog.Kokoro).Returns(false));
+
+        kokoro.DeleteCommand.CanExecute(null).Should().BeTrue();
+        await kokoro.DeleteCommand.ExecuteAsync(null);
+
+        await _dialogs.Received(1).ConfirmAsync(Arg.Is<ConfirmDialogViewModel>(q =>
+            q.Message == TestTexts.Russian.Format("Models.DeleteMessage", kokoro.FullName, kokoro.SizeText)));
+        _store.Received(1).Delete(VoiceModelCatalog.Kokoro);
+        kokoro.IsInstalled.Should().BeFalse();
+        kokoro.DeleteCommand.CanExecute(null).Should().BeFalse();
+        changed.Should().Be(1);
+        catalog.HasInstalled.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A deletion the user cancels touches nothing.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Delete_WhenCancelled_KeepsTheModel()
+    {
+        var kokoro = Catalog().Models.Cast<VoiceModelItemViewModel>().Single(c => c.Model == VoiceModelCatalog.Kokoro);
+        _dialogs.ConfirmAsync(default!).ReturnsForAnyArgs(false);
+
+        await kokoro.DeleteCommand.ExecuteAsync(null);
+
+        _store.DidNotReceiveWithAnyArgs().Delete(default!);
+        kokoro.IsInstalled.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A model whose file is in use stays installed, and the card says why it could not go.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Delete_WhenAFileIsInUse_ShowsWhy()
+    {
+        var kokoro = Catalog().Models.Cast<VoiceModelItemViewModel>().Single(c => c.Model == VoiceModelCatalog.Kokoro);
+        _dialogs.ConfirmAsync(default!).ReturnsForAnyArgs(true);
+        _store.When(s => s.Delete(VoiceModelCatalog.Kokoro)).Do(_ => throw new IOException("in use"));
+
+        await kokoro.DeleteCommand.ExecuteAsync(null);
+
+        kokoro.IsInstalled.Should().BeTrue();
+        kokoro.Error.Should().Be(TestTexts.Russian.Format("Models.DeleteFailed", "in use"));
     }
 
     /// <summary>

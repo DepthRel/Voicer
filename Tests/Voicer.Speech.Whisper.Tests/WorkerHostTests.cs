@@ -69,7 +69,7 @@ public sealed class WorkerHostTests : IDisposable
     public async Task Transcribe_WritesTheRecognition()
     {
         var segment = new TranscriptSegment(TimeSpan.Zero, TimeSpan.FromSeconds(1), "Hello");
-        _engine.TranscribeAsync(_file, _file, 1, Arg.Any<ITranscriptionListener>(), Arg.Any<CancellationToken>())
+        _engine.TranscribeAsync(_file, _file, 1, null, Arg.Any<ITranscriptionListener>(), Arg.Any<CancellationToken>())
             .Returns(call =>
             {
                 var listener = call.Arg<ITranscriptionListener>();
@@ -96,7 +96,7 @@ public sealed class WorkerHostTests : IDisposable
     [Fact]
     public async Task Transcribe_ReportsAModelThatDoesNotLoad()
     {
-        _engine.TranscribeAsync(default!, default!, default, default!, default).ReturnsForAnyArgs(Task.FromException<string?>(new ModelLoadException("no memory")));
+        _engine.TranscribeAsync(default!, default!, default, default, default!, default).ReturnsForAnyArgs(Task.FromException<string?>(new ModelLoadException("no memory")));
 
         var code = await Host().RunAsync(Transcribe(), CancellationToken.None);
 
@@ -115,7 +115,7 @@ public sealed class WorkerHostTests : IDisposable
 
         code.Should().Be(WorkerHost.EXIT_FAILED);
         Events().Single().Error.Should().Be(WorkerErrorCode.ModelNotFound);
-        await _engine.DidNotReceiveWithAnyArgs().TranscribeAsync(default!, default!, default, default!, default);
+        await _engine.DidNotReceiveWithAnyArgs().TranscribeAsync(default!, default!, default, default, default!, default);
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public sealed class WorkerHostTests : IDisposable
     [Fact]
     public async Task Transcribe_EndsQuietlyWhenCancelled()
     {
-        _engine.TranscribeAsync(default!, default!, default, default!, default).ThrowsAsyncForAnyArgs(new OperationCanceledException());
+        _engine.TranscribeAsync(default!, default!, default, default, default!, default).ThrowsAsyncForAnyArgs(new OperationCanceledException());
 
         var code = await Host().RunAsync(Transcribe(), CancellationToken.None);
 

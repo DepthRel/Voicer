@@ -50,6 +50,30 @@ public sealed class ModelStore : IModelStore
     }
 
     /// <inheritdoc />
+    public string DetectorFileOf(SpeechDetectorModel detector)
+    {
+        ArgumentNullException.ThrowIfNull(detector);
+
+        return Path.Combine(_root, detector.Folder, detector.FileName);
+    }
+
+    /// <inheritdoc />
+    public bool IsDetectorInstalled(SpeechDetectorModel detector)
+    {
+        var file = new FileInfo(DetectorFileOf(detector));
+
+        return file.Exists && file.Length == detector.SizeBytes;
+    }
+
+    /// <inheritdoc />
+    public void Delete(SpeechModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        ModelFiles.Delete([FileOf(model)], DirectoryOf(model));
+    }
+
+    /// <inheritdoc />
     public IReadOnlyList<SpeechModel> Installed()
     {
         return [.. _catalog.Where(IsInstalled)];

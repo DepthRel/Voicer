@@ -28,6 +28,14 @@ public interface IVoiceModelStore
     bool IsInstalled(VoiceModel model);
 
     /// <summary>
+    /// Deletes every file of a model from the disk, with its folder once it is left empty.
+    /// </summary>
+    /// <param name="model">The model.</param>
+    /// <exception cref="IOException">A file is in use or the disk failed.</exception>
+    /// <exception cref="UnauthorizedAccessException">A file may not be deleted.</exception>
+    void Delete(VoiceModel model);
+
+    /// <summary>
     /// Lists the models of the catalog that are downloaded.
     /// </summary>
     /// <returns>The installed models, in the order of the catalog.</returns>

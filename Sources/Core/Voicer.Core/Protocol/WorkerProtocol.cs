@@ -47,6 +47,11 @@ public static class WorkerProtocol
     public const string DEVICE_OPTION = "--device";
 
     /// <summary>
+    /// The option with the path of the file of the detector of speech; without it the whole sound is recognized.
+    /// </summary>
+    public const string DETECTOR_OPTION = "--vad";
+
+    /// <summary>
     /// The options of the JSON lines: compact, names in camel case, enumerations by name.
     /// </summary>
     private static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web)
