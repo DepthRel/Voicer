@@ -1,0 +1,188 @@
+/*
+  The Voicer project page. The look follows the application (Sources/Apps/Voicer.UI/Themes/Colors.axaml) and the logo
+  (assets/voicer.svg): a dark ground and the violet-to-blue gradient of the sound wave. No fonts or scripts from other
+  servers.
+*/
+:root {
+  --bg: #1B1D21;
+  --panel: #202328;
+  --card: #22252A;
+  --line: #2F333A;
+  --border: #3A3F47;
+  --text: #E6E8EB;
+  --muted: #A0A6AE;
+  --blue: #4A8FF7;
+  --blue-light: #62A0FA;
+  --sky: #60A5FA;
+  --deep: #3B82F6;
+  --violet: #C084FC;
+  --indigo: #818CF8;
+  --blue-tint: rgba(74, 143, 247, 0.10);
+  --mono: "Cascadia Mono", Consolas, "JetBrains Mono", Menlo, "DejaVu Sans Mono", monospace;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 Inter, "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--sky); text-decoration: none; }
+a:hover { color: var(--blue-light); text-decoration: underline; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+/* Header */
+.top {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(27, 29, 33, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.top .wrap { display: flex; align-items: center; gap: 18px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; color: var(--text); }
+.brand:hover { color: var(--text); text-decoration: none; }
+.brand img { width: 30px; height: 30px; }
+.top nav { margin-left: auto; display: flex; align-items: center; gap: 22px; font-size: 15px; }
+.top nav > a { color: var(--muted); }
+.top nav > a:hover { color: var(--text); text-decoration: none; }
+
+/* The language picker: the flag and the code of the language in use; a click opens the list of languages. */
+.lang { position: relative; }
+html:not(.js) .lang { display: none; }
+.lang-button {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 600 12px/1 var(--mono); letter-spacing: 1px; color: var(--text);
+  background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 6px 10px 6px 7px;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.lang-button:hover, .lang.open .lang-button { border-color: var(--blue); background: var(--panel); }
+.lang-button:focus-visible, .lang-menu li:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.lang .flag {
+  display: block; width: 21px; height: 14px; border-radius: 3px; object-fit: cover; flex: none;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.lang-chevron {
+  width: 7px; height: 7px; margin: -3px 2px 0 0;
+  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg); transition: transform 0.2s, margin 0.2s;
+}
+.lang.open .lang-chevron { transform: rotate(-135deg); margin-top: 3px; }
+.lang-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 200px;
+  list-style: none; margin: 0; padding: 6px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  transform-origin: top right; animation: menu 0.16s ease-out both;
+}
+@keyframes menu { from { opacity: 0; transform: scale(0.96) translateY(-4px); } }
+.lang-menu li {
+  display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 8px;
+  color: var(--text); font-size: 15px; cursor: pointer; transition: background 0.12s;
+}
+.lang-menu li:hover, .lang-menu li:focus { background: var(--panel); outline: none; }
+.lang-menu li span:nth-child(2) { flex: 1; }
+.lang-menu .lang-code { font: 600 11px/1 var(--mono); letter-spacing: 1px; color: var(--muted); }
+.lang-menu li[aria-selected="true"] { background: var(--blue-tint); }
+.lang-menu li[aria-selected="true"] .lang-code { color: var(--sky); }
+
+/* A switch of the language fades the texts out and back in instead of flickering. */
+main, footer { transition: opacity 0.16s ease-out; }
+body.switching main, body.switching footer { opacity: 0.15; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  border-radius: 10px; padding: 13px 22px; font-weight: 600; font-size: 16px;
+  color: var(--text); background: var(--card); border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.2s, transform 0.15s;
+}
+.btn:hover { text-decoration: none; color: var(--text); border-color: var(--blue); transform: translateY(-1px); }
+.btn.accent {
+  border: none; color: #fff;
+  background: linear-gradient(110deg, var(--violet), var(--indigo) 45%, var(--deep));
+  background-size: 200% 100%;
+  box-shadow: 0 8px 28px rgba(129, 140, 248, 0.35);
+  animation: flow 8s ease-in-out infinite alternate;
+}
+.btn.accent:hover { box-shadow: 0 10px 34px rgba(129, 140, 248, 0.55); }
+@keyframes flow { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+/* Hero */
+.hero {
+  position: relative; overflow: hidden; text-align: center; padding: 84px 0 0;
+  background:
+    radial-gradient(640px 360px at 22% 10%, rgba(192, 132, 252, 0.20), transparent 70%),
+    radial-gradient(700px 420px at 82% 70%, rgba(59, 130, 246, 0.18), transparent 70%);
+}
+.hero h1 { margin: 0 auto; max-width: 860px; font-size: clamp(36px, 6vw, 60px); line-height: 1.1; letter-spacing: -0.5px; }
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--violet), var(--indigo), var(--sky), var(--violet));
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: flow 10s linear infinite alternate;
+}
+.lead { margin: 22px auto 0; max-width: 700px; color: var(--muted); font-size: 19px; }
+.actions { margin-top: 32px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.note { margin: 18px 0 0; color: var(--muted); font-size: 14px; }
+.wave { display: block; width: min(1200px, 100%); height: auto; margin: 18px auto 0; }
+
+/* Sections */
+section { padding: 72px 0; }
+#features { border-top: 1px solid var(--line); }
+h2 { margin: 0 0 30px; font-size: 32px; text-align: center; }
+h3 { margin: 0 0 8px; font-size: 19px; }
+
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.card {
+  position: relative; padding: 24px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line);
+  transition: border-color 0.2s, transform 0.2s;
+}
+.card::before {
+  content: ""; position: absolute; left: 24px; top: 0; width: 44px; height: 3px; border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, var(--violet), var(--deep));
+}
+.card:hover { border-color: var(--border); transform: translateY(-2px); }
+.card p { margin: 0; color: var(--muted); font-size: 16px; }
+
+/* Downloads */
+#download { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.download {
+  display: flex; flex-direction: column; gap: 10px; padding: 26px;
+  border-radius: 14px; background: var(--card); border: 1px solid var(--line);
+}
+.download h3 { margin: 0; font-size: 22px; }
+.download p { margin: 0; color: var(--muted); font-size: 15px; flex: 1; }
+.download .meta { flex: none; font: 600 12px/1 var(--mono); color: var(--sky); min-height: 12px; }
+.download .other { font-size: 14px; text-align: center; }
+.download.mine { border-color: var(--indigo); box-shadow: 0 0 0 1px var(--indigo), 0 12px 40px rgba(129, 140, 248, 0.18); }
+
+/* Footer */
+footer { padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; }
+footer nav { display: flex; flex-wrap: wrap; gap: 22px; }
+footer a { color: var(--muted); }
+footer a:hover { color: var(--text); }
+
+@media (max-width: 860px) {
+  .cards, .downloads { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .hide-phone { display: none; }
+  .hero { padding-top: 56px; }
+  .lead { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { animation: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
+}

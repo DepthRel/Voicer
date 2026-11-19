@@ -53,6 +53,7 @@ The packages:
 |---|---|
 | `Assets/generate-icon.ps1` | the icon of the application (`voicer.ico`, PNG 256/512), the same picture as `voicer.svg` |
 | `Assets/generate-flags.ps1` | the flags of the language selector |
+| `Assets/generate-wave.ps1` | the animated sound wave: the banner of the README (`Docs/images/banner.svg`) and the wave of the project page |
 | `Assets/generate-installer-art.ps1` | the pictures of the setup wizard in `artifacts/installer-art` (the build script runs it) |
 
 ## Licenses

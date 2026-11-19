@@ -1,6 +1,6 @@
 # Developing Voicer
 
-English · [Русский](../Ru/Development.md)
+**English** · [Deutsch](../De/Development.md) · [Español](../Es/Development.md) · [Français](../Fr/Development.md) · [Português](../Pt/Development.md) · [Русский](../Ru/Development.md)
 
 ## Build, test, run
 
@@ -21,7 +21,7 @@ dotnet Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll --worker transcrib
 ## Rules
 
 The code rules are in [AGENTS.md](../../AGENTS.md); the build and `Tests/Voicer.Conventions.Tests` enforce them.
-`Tests/Voicer.Localization.Tests` checks that both packs have the same keys and placeholders, that every key the code
+`Tests/Voicer.Localization.Tests` checks that every pack has the same keys and placeholders, that every key the code
 and the views use exists, and that no Russian text sits in the sources.
 
 ## Adding a language
@@ -32,7 +32,20 @@ and the views use exists, and that no Russian text sits in the sources.
    (UTF-8 with BOM), and `Scripts/Shared/License/intro.<code>.txt`.
 4. The notes of the packages: `Scripts/App/Notes/README.<code>.txt`; the menu entries in `Scripts/App/build-deb.sh`
    and `publish-common.sh`.
-5. The documentation: `Docs/<Code>/` with the same files as `Docs/En`.
+5. The documentation: `Docs/<Code>/` with the same files as `Docs/En` (see [Documentation](#documentation)).
+6. The project page: an entry in `list` and `docs` of `Sources/Apps/Voicer.Pages/assets/languages.js`, its flag
+   `assets/flags/<code>.svg` and a table in `assets/site.js`.
+
+## Documentation
+
+The documents are kept by language: `Docs/En` is the main set; `Docs/De`, `Docs/Es`, `Docs/Fr`, `Docs/Pt` and
+`Docs/Ru` hold the same set in German, Spanish, French, Portuguese and Russian. The line under the title of every
+document links the same document in the other languages.
+
+- the set of files and their names are the same in every language; a change of meaning goes into all languages at
+  once;
+- links from outside (the README) lead to `Docs/En`; the project page opens the documents in the language chosen on
+  it.
 
 ## Adding a model
 
@@ -48,7 +61,11 @@ runs well on the processor. The text `VoiceModel.<id>.Description` and `SpeechLa
 into every pack; the release of llama.cpp in `LlamaCppPackage` must support the model. A new release of llama.cpp is
 pinned there with the size and SHA-256 of every archive.
 
-## Packages
+## Packages and the project page
 
 See [Scripts/README.md](../../Scripts/README.md). A package carries only the native libraries of its own platform;
 models, FFmpeg and llama.cpp are not in it, the user downloads them from the settings.
+
+GitHub Actions: `ci.yml` builds and tests on Windows and Linux for every push to `main` and every pull request;
+`packages.yml` builds every package by hand or for a version tag and attaches them to a draft release; `pages.yml`
+publishes the project page (`Sources/Apps/Voicer.Pages`, see its README) on every change of it in `main`.

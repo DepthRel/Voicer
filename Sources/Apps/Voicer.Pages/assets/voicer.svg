@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Voicer</title>
+  <defs>
+    <radialGradient id="glow" cx="128" cy="128" r="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7882FA" stop-opacity="0.43" />
+      <stop offset="1" stop-color="#60A5FA" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="wave" x1="0" y1="23" x2="0" y2="233" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C084FC" />
+      <stop offset="1" stop-color="#3B82F6" />
+    </linearGradient>
+  </defs>
+  <!-- Five bars of a sound wave over a soft glow; Scripts/Assets/generate-icon.ps1 draws the same picture. -->
+  <circle cx="128" cy="128" r="120" fill="url(#glow)" />
+  <rect x="30" y="88" width="28" height="80" rx="14" fill="url(#wave)" />
+  <rect x="72" y="53" width="28" height="150" rx="14" fill="url(#wave)" />
+  <rect x="114" y="23" width="28" height="210" rx="14" fill="url(#wave)" />
+  <rect x="156" y="58" width="28" height="140" rx="14" fill="url(#wave)" />
+  <rect x="198" y="93" width="28" height="70" rx="14" fill="url(#wave)" />
+</svg>

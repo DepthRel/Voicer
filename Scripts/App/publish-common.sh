@@ -69,6 +69,10 @@ cat > "$HOME/.local/share/applications/voicer.desktop" <<ENTRY
 Type=Application
 Name=Voicer
 Comment=Turn the speech of audio and video files into text
+Comment[de]=Verwandelt die Sprache in Audio- und Videodateien in Text
+Comment[es]=Convierte en texto el habla de archivos de audio y vídeo
+Comment[fr]=Transforme en texte la parole des fichiers audio et vidéo
+Comment[pt]=Transforma em texto a fala de ficheiros de áudio e vídeo
 Comment[ru]=Превращает речь из аудио- и видеофайлов в текст
 Exec="$here/ui/Voicer.UI"
 Path=$here/ui

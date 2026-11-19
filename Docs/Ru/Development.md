@@ -1,6 +1,6 @@
 # Разработка Voicer
 
-[English](../En/Development.md) · Русский
+[English](../En/Development.md) · [Deutsch](../De/Development.md) · [Español](../Es/Development.md) · [Français](../Fr/Development.md) · [Português](../Pt/Development.md) · **Русский**
 
 ## Сборка, тесты, запуск
 
@@ -21,7 +21,7 @@ dotnet Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll --worker transcrib
 ## Правила
 
 Правила кода — в [AGENTS.md](../../AGENTS.md); их проверяют сборка и `Tests/Voicer.Conventions.Tests`.
-`Tests/Voicer.Localization.Tests` проверяет, что в обоих пакетах одинаковые ключи и подстановки, что каждый ключ из
+`Tests/Voicer.Localization.Tests` проверяет, что во всех пакетах одинаковые ключи и подстановки, что каждый ключ из
 кода и разметки существует и что в исходниках нет русского текста.
 
 ## Как добавить язык
@@ -32,7 +32,18 @@ dotnet Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll --worker transcrib
    (UTF-8 с BOM), и `Scripts/Shared/License/intro.<code>.txt`.
 4. Заметки пакетов: `Scripts/App/Notes/README.<code>.txt`; пункты меню в `Scripts/App/build-deb.sh` и
    `publish-common.sh`.
-5. Документация: `Docs/<Code>/` с тем же набором файлов, что и `Docs/En`.
+5. Документация: `Docs/<Code>/` с тем же набором файлов, что и `Docs/En` (см. [Документация](#документация)).
+6. Страница проекта: запись в `list` и `docs` файла `Sources/Apps/Voicer.Pages/assets/languages.js`, её флаг
+   `assets/flags/<code>.svg` и таблица в `assets/site.js`.
+
+## Документация
+
+Документы разложены по языкам: `Docs/En` — основной набор; `Docs/De`, `Docs/Es`, `Docs/Fr`, `Docs/Pt` и `Docs/Ru`
+хранят тот же набор на немецком, испанском, французском, португальском и русском. Строка под заголовком каждого
+документа ведёт на тот же документ на других языках.
+
+- набор файлов и их имена одинаковы во всех языках; изменение смысла вносится во все языки сразу;
+- ссылки снаружи (README) ведут в `Docs/En`; страница проекта открывает документы на выбранном на ней языке.
 
 ## Как добавить модель
 
@@ -48,7 +59,11 @@ dotnet Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll --worker transcrib
 llama.cpp в `LlamaCppPackage` должен поддерживать модель. Новый выпуск llama.cpp закрепляется там же, с размером и
 SHA-256 каждого архива.
 
-## Пакеты
+## Пакеты и страница проекта
 
 См. [Scripts/README.md](../../Scripts/README.md). Пакет несёт только нативные библиотеки своей платформы; моделей,
 FFmpeg и llama.cpp в нём нет — пользователь скачивает их из настроек.
+
+GitHub Actions: `ci.yml` собирает и тестирует на Windows и Linux при каждом пуше в `main` и в каждом pull request;
+`packages.yml` собирает все пакеты вручную или по тегу версии и прикладывает их к черновику выпуска; `pages.yml`
+публикует страницу проекта (`Sources/Apps/Voicer.Pages`, см. её README) при каждом её изменении в `main`.

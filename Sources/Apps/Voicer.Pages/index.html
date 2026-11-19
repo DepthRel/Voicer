@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Nothing is loaded from other servers and nothing inline runs: the page reads only its own files. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Voicer: speech to text and text to speech on your computer</title>
+  <meta name="description" content="Voicer turns the speech of audio and video files into text and a text into speech, with Whisper and free voice models on your own video card or processor. Free, for Windows, Linux and macOS.">
+  <meta property="og:title" content="Voicer: speech to text and text to speech on your computer">
+  <meta property="og:description" content="Whisper and free voice models on your own video card or processor. No cloud, no account.">
+  <link rel="icon" href="assets/voicer.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/voicer.svg" alt=""><span>Voicer</span></a>
+      <nav>
+        <a class="hide-phone" href="#features" data-t="nav.features">Features</a>
+        <a href="#download" data-t="nav.download">Download</a>
+        <a class="hide-phone" href="https://github.com/DepthRel/Voicer">GitHub</a>
+        <!-- The language picker: languages.js fills it in; without scripts the page simply stays in English. -->
+        <div class="lang" data-root="" aria-label="Language"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <h1 data-t="hero.title">Speech to text and back.<br><em>On your own computer.</em></h1>
+        <p class="lead" data-t="hero.lead">Voicer turns the speech of audio and video files into text, and a text into natural speech. Whisper and free voice models run on your video card or processor: no cloud, no account, nothing leaves the machine.</p>
+        <div class="actions">
+          <a class="btn accent" id="hero-download" href="#download"><span data-t="hero.download">Download Voicer</span></a>
+          <a class="btn" href="#features" data-t="hero.features">What it can do</a>
+        </div>
+        <p class="note" data-t="hero.platforms">Free and open source · Windows · Linux · macOS</p>
+      </div>
+      <!-- The sound wave of the logo, beating like a heart while its colours flow. -->
+      <img class="wave" src="assets/wave.svg" alt="" width="1200" height="260">
+    </section>
+
+    <section id="features">
+      <div class="wrap">
+        <h2 data-t="features.title">What Voicer does</h2>
+        <div class="cards">
+          <article class="card">
+            <h3 data-t="f.stt.title">Speech to text</h3>
+            <p data-t="f.stt.text">Drop an MP3, WAV, MP4, MKV or any other media file and get its text, in about a hundred languages. Export to Markdown.</p>
+          </article>
+          <article class="card">
+            <h3 data-t="f.tts.title">Text to speech</h3>
+            <p data-t="f.tts.text">Paste a script, pick a voice or give a sample of your own, and get a narration up to tens of minutes long.</p>
+          </article>
+          <article class="card">
+            <h3 data-t="f.history.title">History and search</h3>
+            <p data-t="f.history.text">Every text and narration is kept with its sound. Find a record by words or by meaning and listen from that moment.</p>
+          </article>
+          <article class="card">
+            <h3 data-t="f.ask.title">Summaries and questions</h3>
+            <p data-t="f.ask.text">A language model on your own server sums up a long meeting and answers questions about your records, with references.</p>
+          </article>
+          <article class="card">
+            <h3 data-t="f.device.title">Your video card or processor</h3>
+            <p data-t="f.device.text">Vulkan on Windows and Linux, Metal on Apple silicon. No video card? The light models run well on the processor.</p>
+          </article>
+          <article class="card">
+            <h3 data-t="f.private.title">Private by design</h3>
+            <p data-t="f.private.text">Recordings never leave the computer. Models are downloaded once, checked by SHA-256 and kept next to the program.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap">
+        <h2 data-t="dl.title">Download</h2>
+        <div class="downloads">
+          <div class="download" data-os="windows">
+            <h3>Windows</h3>
+            <p class="meta"></p>
+            <p data-t="dl.windows.text">Windows 10 or newer, x64. The installer works without administrator rights.</p>
+            <a class="btn accent" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="url" data-t="dl.button">Download</a>
+            <a class="other" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="zip" data-t="dl.windows.other">or the portable .zip archive</a>
+          </div>
+          <div class="download" data-os="linux">
+            <h3>Linux</h3>
+            <p class="meta"></p>
+            <p data-t="dl.linux.text">x64. A .deb package for Debian and Ubuntu; FFmpeg from your package manager.</p>
+            <a class="btn accent" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="deb" data-t="dl.button">Download</a>
+            <a class="other" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="url" data-t="dl.linux.other">or the portable .tar.gz archive</a>
+          </div>
+          <div class="download" data-os="macos">
+            <h3>macOS</h3>
+            <p class="meta"></p>
+            <p data-t="dl.macos.text">Apple silicon and Intel; FFmpeg from Homebrew. Voice generation needs Apple silicon.</p>
+            <a class="btn accent" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="url" data-t="dl.button">Download</a>
+            <a class="other" href="https://github.com/DepthRel/Voicer/releases/latest" data-field="intel" data-t="dl.macos.other">or for Macs with an Intel processor</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Voicer · GPL-3.0-or-later</span>
+      <nav>
+        <a id="architecture-link" href="https://github.com/DepthRel/Voicer/blob/main/Docs/En/Architecture.md" data-t="foot.architecture">Architecture</a>
+        <a href="https://github.com/DepthRel/Voicer" data-t="foot.source">Source code</a>
+        <a href="https://github.com/DepthRel/Voicer/releases" data-t="foot.releases">All releases</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="assets/languages.js"></script>
+  <script src="assets/site.js"></script>
+</body>
+</html>

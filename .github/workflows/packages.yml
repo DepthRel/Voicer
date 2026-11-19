@@ -1,11 +1,12 @@
-# Builds every package of an Voicer release: Windows (installer and .zip), Linux (.deb and .tar.gz) and macOS (Apple
+# Builds every package of a Voicer release: Windows (installer and .zip), Linux (.deb and .tar.gz) and macOS (Apple
 # silicon and Intel), with the checksums.
 #
 # Two ways to start it:
 #   - by hand: Actions -> Packages -> Run workflow. The packages appear as "Artifacts" of the run; nothing is released.
 #   - by a version tag (git tag 0.1.0 && git push origin 0.1.0). The tag must equal <Version> of Directory.Build.props.
 #     The packages and SHA256SUMS-<version>.txt are attached to the release of that tag; a release that does not exist
-#     yet is created as a draft, so nothing is published by itself: write the notes, check the files, press Publish. Files with the same names are replaced, others stay.
+#     yet is created as a draft, so nothing is published by itself: write the notes, check the files, press Publish,
+#     then fill in Sources/Apps/Voicer.Pages/updates.json. Files with the same names are replaced, others stay.
 #
 # Code signing goes into the Windows job, between "Build" and the upload of the artifact. The macOS packages are built
 # on macOS, so their programs get an ad-hoc signature there (not a Developer ID one).
@@ -148,5 +149,5 @@ jobs:
             gh release upload "$TAG" packages/* --clobber
           else
             gh release create "$TAG" packages/* --draft --title "Voicer $TAG" \
-              --notes "Every package of Voicer $TAG. Write the notes, check the files, then publish."
+              --notes "Every package of Voicer $TAG. Write the notes, check the files, then publish and fill in updates.json of the project page."
           fi

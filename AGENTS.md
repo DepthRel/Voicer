@@ -95,7 +95,8 @@ types, XML comments of every member, enums in `Enums`, logical operators, the or
 
 ```
 Sources/
-  Apps/            the desktop application Voicer.UI (Avalonia); started with --worker it is the worker process
+  Apps/            the desktop application Voicer.UI (Avalonia); started with --worker it is the worker process; the
+                   project page Voicer.Pages (static, GitHub Pages)
   Core/            the core (Voicer.Core: data folders, model catalog, devices, transcripts, worker protocol) and the
                    localization (Voicer.Localization)
   Infrastructure/  downloads checked by SHA-256 (Voicer.Downloads), FFmpeg: finding, installing, extracting the sound
@@ -105,7 +106,7 @@ Sources/
   Speech/          speech engines: Whisper through Whisper.net, the device list and the worker host
                    (Voicer.Speech.Whisper); text to speech through the pinned llama.cpp (Voicer.Speech.Llama)
 Tests/             test projects (<Project>.Tests), Shared (the localizers of the tests)
-Docs/              documentation by language: En (the main set), Ru (the same set translated)
+Docs/              documentation by language: En (the main set), De, Es, Fr, Pt, Ru (the same set translated)
 Scripts/           packaging: App (the application and its installers), Assets (pictures), Shared (helpers of the
                    others); build-release.ps1 builds a whole release; see Scripts/README.md
 ```
@@ -128,12 +129,14 @@ models in `Data/Models/<model id>`, tools in `Data/Tools` (FFmpeg on Windows, ll
   exceptions. There are no human-language strings in code or markup and no "if the language is …" branches: a
   language is the chosen pack, not a condition. Developer-only log and exception details stay in English. The worker
   sends codes (`WorkerErrorCode`), not texts: the application words them.
-- A key is added to every language file at once; English is the default language. The languages are English and
-  Russian. The first start takes the language of the operating system when there is a pack for it, and the choice is
-  remembered in `Data/settings.json`.
-- Every language has a flag (`Scripts/Assets/generate-flags.ps1`), messages and a license page in the setup wizard
+- A key is added to every language file at once; English is the default language. The languages are English,
+  German, Spanish, French, Portuguese (European) and Russian. The first start takes the language of the operating
+  system when there is a pack for it, and the choice is remembered in `Data/settings.json`.
+- Every language has a flag (`Scripts/Assets/generate-flags.ps1`), a table on the project page
+  (`Sources/Apps/Voicer.Pages/assets/site.js`), messages and a license page in the setup wizard
   (`Scripts/App/voicer.iss`, `Scripts/Shared/License/intro.<code>.txt`) and package notes
   (`Scripts/App/Notes/README.<code>.txt`).
-- The documentation is kept in every language at once: the set of files in `Docs/En` and `Docs/Ru` is the same, and a
-  change of meaning goes into both. Links from outside lead to `Docs/En`. Details:
+- The documentation is kept in every language at once: the set of files in `Docs/En`, `Docs/De`, `Docs/Es`,
+  `Docs/Fr`, `Docs/Pt` and `Docs/Ru` is the same, and a change of meaning goes into all of them. Links from outside
+  lead to `Docs/En`. Details:
   [Docs/En/Development.md](Docs/En/Development.md).

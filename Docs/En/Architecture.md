@@ -1,6 +1,6 @@
 # Voicer architecture
 
-English · [Русский](../Ru/Architecture.md)
+**English** · [Deutsch](../De/Architecture.md) · [Español](../Es/Architecture.md) · [Français](../Fr/Architecture.md) · [Português](../Pt/Architecture.md) · [Русский](../Ru/Architecture.md)
 
 Voicer turns the speech of audio and video files into text, and a text into speech, on the computer of the user. The
 tabs are Transcription, Generation, History and Settings.
@@ -19,6 +19,7 @@ tabs are Transcription, Generation, History and Settings.
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper through Whisper.net: the list of devices, the recognition, the worker host |
 | `Sources/Speech/Voicer.Speech.Llama` | text to speech with llama.cpp: its pinned build and installation, the arguments of llama-tts and the synthesizer that runs it per piece of text |
 | `Sources/Apps/Voicer.UI` | the Avalonia application (MVVM with CommunityToolkit.Mvvm); the same program is the worker |
+| `Sources/Apps/Voicer.Pages` | the project page: static files published by GitHub Pages |
 
 Dependencies point inwards: Core knows no UI, network or engine.
 
@@ -146,10 +147,10 @@ indexed by the upgrade).
   beginning without the last one or two letters, so other forms match (*договоров* finds *договор*); any word is
   enough, more of them rank higher. Only letters and digits reach the index.
 - **By meaning**: a model of embeddings on the same server (`POST embeddings`), chosen in the settings next to the
-  model of summaries; a multilingual one (bge-m3, multilingual-e5) for Russian speech. Before a search, every passage
-  without a vector of that model gets one, sixteen per request (the indexing is shown); the vectors are normalized and
-  kept per model in `embeddings`, so changing the model indexes again without losing the old ones. The closest are
-  found by cosine in memory: thousands of passages take milliseconds and no native extension is needed.
+  model of summaries; a multilingual one (bge-m3, multilingual-e5) for speech that is not English. Before a search,
+  every passage without a vector of that model gets one, sixteen per request (the indexing is shown); the vectors are
+  normalized and kept per model in `embeddings`, so changing the model indexes again without losing the old ones. The
+  closest are found by cosine in memory: thousands of passages take milliseconds and no native extension is needed.
   `EmbeddingText` adds the prefixes some families expect (`query:`/`passage:` of e5, `search_query:`/
   `search_document:` of nomic).
 - **Fusion**: both lists are merged by Reciprocal Rank Fusion (k = 60), like the hybrid search of Elasticsearch.

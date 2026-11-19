@@ -19,12 +19,13 @@ public sealed partial class LanguagePackTests
     private static readonly LanguageCatalog _catalog = LanguageCatalog.LoadEmbedded();
 
     /// <summary>
-    /// The packs are English and Russian, English first.
+    /// The packs are English, German, Spanish, French, Portuguese and Russian: English first, then the others by their
+    /// own names.
     /// </summary>
     [Fact]
-    public void Catalog_OffersEnglishThenRussian()
+    public void Catalog_OffersEnglishThenTheOthersByName()
     {
-        _catalog.Languages.Select(l => l.Code).Should().Equal("en", "ru");
+        _catalog.Languages.Select(l => l.Code).Should().Equal("en", "de", "es", "fr", "pt", "ru");
     }
 
     /// <summary>

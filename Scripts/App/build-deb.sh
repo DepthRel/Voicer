@@ -69,6 +69,10 @@ Type=Application
 Name=Voicer
 GenericName=Speech to text
 Comment=Turn the speech of audio and video files into text
+Comment[de]=Verwandelt die Sprache in Audio- und Videodateien in Text
+Comment[es]=Convierte en texto el habla de archivos de audio y vídeo
+Comment[fr]=Transforme en texte la parole des fichiers audio et vidéo
+Comment[pt]=Transforma em texto a fala de ficheiros de áudio e vídeo
 Comment[ru]=Превращает речь из аудио- и видеофайлов в текст
 Exec=voicer
 Icon=voicer
@@ -90,6 +94,10 @@ cat > "$root/usr/share/metainfo/io.github.depthrel.Voicer.metainfo.xml" <<METAIN
   <id>io.github.depthrel.Voicer</id>
   <name>Voicer</name>
   <summary>Turn the speech of audio and video files into text</summary>
+  <summary xml:lang="de">Verwandelt die Sprache in Audio- und Videodateien in Text</summary>
+  <summary xml:lang="es">Convierte en texto el habla de archivos de audio y vídeo</summary>
+  <summary xml:lang="fr">Transforme en texte la parole des fichiers audio et vidéo</summary>
+  <summary xml:lang="pt">Transforma em texto a fala de ficheiros de áudio e vídeo</summary>
   <summary xml:lang="ru">Превращает речь из аудио- и видеофайлов в текст</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
