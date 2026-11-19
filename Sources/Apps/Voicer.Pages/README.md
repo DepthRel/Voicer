@@ -10,32 +10,16 @@ on purpose: what Voicer is, what it does, and the downloads for the three system
 | `assets/wave.svg` | The animated sound wave of the hero: bars beating like a heart, the colours of the logo flowing through them. Drawn by `Scripts/Assets/generate-wave.ps1` together with `Docs/images/banner.svg` of the README. |
 | `assets/languages.js`, `assets/flags/*.svg` | The languages of the page (English, German, Spanish, French, Portuguese, Russian), the language picker with flags and the links to the documentation in the chosen language. |
 | `assets/voicer.svg` | The logo, the same as `Sources/Apps/Voicer.UI/Assets/voicer.svg`. |
-| `updates.json` (after the first release) | The latest release. The "Download" buttons read it; without it they lead to the releases page. |
-
-## First publication
-
-1. Open the repository on GitHub: **Settings → Pages**.
-2. Under **Build and deployment** choose **Source: GitHub Actions**.
-3. Push a commit with this folder to `main` (or run the **Pages** workflow by hand on the **Actions** tab).
-4. A couple of minutes later the page opens at <https://depthrel.github.io/Voicer/>. The "Deploy" badge of the README
-   shows the state of the last publication.
+| `updates.json` | The current release (0.1.0): the version shown on the cards and the files the "Download" buttons lead to. The same files are written in the links of `index.html`, so the buttons work without scripts too. |
 
 ## A new release
 
-1. Push the version tag (or run `Scripts/build-release.ps1`), check the draft release with its packages and publish it.
-2. Create or fill in `updates.json` (without it the buttons lead to the releases page):
+The links lead to the files of a fixed version, `0.1.0` for now; they answer 404 until that release is published.
 
-   ```json
-   {
-     "windows": { "version": "X.Y.Z", "url": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-setup.exe",
-                  "zip": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-win-x64.zip" },
-     "linux":   { "version": "X.Y.Z", "url": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-linux-x64.tar.gz",
-                  "deb": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-linux-x64.deb" },
-     "macos":   { "version": "X.Y.Z", "url": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-osx-arm64.tar.gz",
-                  "intel": "https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-osx-x64.tar.gz" }
-   }
-   ```
-3. Commit it only after the release is published: an early `updates.json` sends every visitor to a 404.
+1. Push the version tag (or run `Scripts/build-release.ps1`), check the draft release with its packages and publish it.
+2. Replace the old version with the new one in `updates.json` and in the download links of `index.html` (every
+   address has the form `https://github.com/DepthRel/Voicer/releases/download/X.Y.Z/Voicer-X.Y.Z-<package>`).
+3. Commit; the Pages workflow publishes the page.
 
 ## Rules of the page
 
