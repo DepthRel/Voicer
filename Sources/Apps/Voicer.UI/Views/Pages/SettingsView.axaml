@@ -1,0 +1,230 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Voicer.UI.Localization"
+             xmlns:vm="using:Voicer.UI.ViewModels.Pages"
+             xmlns:items="using:Voicer.UI.ViewModels.Items"
+             xmlns:dialogs="using:Voicer.UI.ViewModels.Dialogs"
+             xmlns:summaries="using:Voicer.Core.Summaries"
+             xmlns:controls="using:Voicer.UI.Controls"
+             xmlns:views="using:Voicer.UI.Views.Controls"
+             x:Class="Voicer.UI.Views.Pages.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="32,26,32,32" Spacing="18" MaxWidth="900">
+
+      <!-- The title, and the version of the application beside it. -->
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="page-title" Text="{loc:Loc Settings.Title}" VerticalAlignment="Center" />
+        <Border Grid.Column="1" Classes="tag accent">
+          <SelectableTextBlock Classes="mono" FontSize="12" Foreground="{StaticResource AccentHoverBrush}" Text="{Binding VersionText}" />
+        </Border>
+      </Grid>
+
+      <!-- The language of the interface. -->
+      <Border Classes="card">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Classes="badge">
+            <controls:IconView IconKey="Icon.Globe" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+            <TextBlock Classes="section" Text="{loc:Loc Settings.Language}" />
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Settings.LanguageHint}" />
+            <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Language.Error}" IsVisible="{Binding Language.HasError}" />
+          </StackPanel>
+          <views:LanguageSelector Grid.Column="2" DataContext="{Binding Language}" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <!-- The models, of recognition and of generation, in one card; the cards of the models are in windows of their own. -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="group-title" Text="{loc:Loc Settings.ModelsGroup}" />
+        <Border Classes="card">
+          <StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto" DataContext="{Binding SpeechModels}" x:DataType="dialogs:ModelCatalogViewModel">
+              <Border Classes="badge">
+                <controls:IconView IconKey="Icon.Model" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                <TextBlock Classes="section" Text="{Binding Title}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Settings.ModelsHint}" />
+                <TextBlock Classes="muted" Classes.success="{Binding HasInstalled}" Text="{Binding Summary}" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="outline" VerticalAlignment="Center" Command="{Binding OpenCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <controls:IconView Classes="small" IconKey="Icon.Model" />
+                  <TextBlock Text="{loc:Loc Models.Choose}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+
+            <Border Classes="divider" />
+
+            <Grid ColumnDefinitions="Auto,*,Auto" DataContext="{Binding VoiceModels}" x:DataType="dialogs:ModelCatalogViewModel">
+              <Border Classes="badge">
+                <controls:IconView IconKey="Icon.Speaker" />
+              </Border>
+              <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                <TextBlock Classes="section" Text="{Binding Title}" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Settings.VoiceModelsHint}" />
+                <TextBlock Classes="muted" Classes.success="{Binding HasInstalled}" Text="{Binding Summary}" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="outline" VerticalAlignment="Center" Command="{Binding OpenCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <controls:IconView Classes="small" IconKey="Icon.Speaker" />
+                  <TextBlock Text="{loc:Loc Models.Choose}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- The programs Voicer runs: FFmpeg reads the sound of files, llama.cpp runs the voice models. -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="group-title" Text="{loc:Loc Settings.ToolsGroup}" />
+        <Border Classes="card">
+          <StackPanel>
+            <StackPanel Spacing="10" DataContext="{Binding Ffmpeg}" x:DataType="items:FfmpegItemViewModel">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="badge">
+                  <controls:IconView IconKey="Icon.Tool" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                  <TextBlock Classes="section" Text="FFmpeg" />
+                  <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Ffmpeg.Description}" />
+                  <Grid ColumnDefinitions="Auto,*">
+                    <controls:IconView Classes="small" IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" Margin="0,0,6,0" VerticalAlignment="Top" IsVisible="{Binding IsFound}" />
+                    <TextBlock Grid.Column="1" Classes="muted" Classes.success="{Binding IsFound}" TextWrapping="Wrap" Text="{Binding StatusText}" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Button Classes="icon" Command="{Binding RefreshCommand}"
+                          ToolTip.Tip="{loc:Loc Ffmpeg.Refresh}" AutomationProperties.Name="{loc:Loc Ffmpeg.Refresh}">
+                    <controls:IconView IconKey="Icon.Refresh" />
+                  </Button>
+                  <Button Classes="accent" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Download" Foreground="White" />
+                      <TextBlock Text="{loc:Loc Key=Ffmpeg.Install, Arg={Binding SizeText}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="outline" Command="{Binding CancelCommand}" IsVisible="{Binding IsInstalling}"
+                          Content="{loc:Loc Common.Cancel}" />
+                </StackPanel>
+              </Grid>
+              <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" IsVisible="{Binding IsInstalling}" />
+              <SelectableTextBlock Classes="mono secondary" TextWrapping="Wrap" Text="{Binding Hint}" IsVisible="{Binding ShowHint}" />
+              <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+            </StackPanel>
+
+            <Border Classes="divider" />
+
+            <StackPanel Spacing="10" DataContext="{Binding LlamaCpp}" x:DataType="items:LlamaCppItemViewModel">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="badge">
+                  <controls:IconView IconKey="Icon.Tool" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                  <TextBlock Classes="section" Text="llama.cpp" />
+                  <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc LlamaCpp.Description}" />
+                  <Grid ColumnDefinitions="Auto,*">
+                    <controls:IconView Classes="small" IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" Margin="0,0,6,0" VerticalAlignment="Top" IsVisible="{Binding IsFound}" />
+                    <TextBlock Grid.Column="1" Classes="muted" Classes.success="{Binding IsFound}" TextWrapping="Wrap" Text="{Binding StatusText}" VerticalAlignment="Center" />
+                  </Grid>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Button Classes="accent" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Download" Foreground="White" />
+                      <TextBlock Text="{loc:Loc Key=Ffmpeg.Install, Arg={Binding SizeText}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="outline" Command="{Binding CancelCommand}" IsVisible="{Binding IsInstalling}"
+                          Content="{loc:Loc Common.Cancel}" />
+                </StackPanel>
+              </Grid>
+              <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" IsVisible="{Binding IsInstalling}" />
+              <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- Summaries: a server of language models with the OpenAI-compatible API, and its model. -->
+      <Border Classes="card" DataContext="{Binding Summary}" x:DataType="items:SummarySettingsViewModel">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Classes="badge">
+              <controls:IconView IconKey="Icon.File" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="3" Margin="14,0,0,0" VerticalAlignment="Center">
+              <TextBlock Classes="section" Text="{loc:Loc Summary.Settings}" />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Summary.SettingsHint}" />
+            </StackPanel>
+          </Grid>
+
+          <Grid ColumnDefinitions="*,16,2*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+            <TextBlock Classes="field-label" Text="{loc:Loc Summary.Preset}" />
+            <ComboBox Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}"
+                      PlaceholderText="{loc:Loc Summary.PresetPlaceholder}" AutomationProperties.Name="{loc:Loc Summary.Preset}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="summaries:LanguageModelPreset">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Grid.Column="2" Classes="field-label" Text="{loc:Loc Summary.Address}" />
+            <TextBox Grid.Row="1" Grid.Column="2" Classes="mono" Text="{Binding Address}" AutomationProperties.Name="{loc:Loc Summary.Address}" />
+
+            <TextBlock Grid.Row="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Model}" />
+            <ComboBox Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" Margin="0,0,16,0"
+                      ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
+                      PlaceholderText="{loc:Loc Summary.NoModels}" AutomationProperties.Name="{loc:Loc Summary.Model}" />
+
+            <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.ApiKey}" />
+            <TextBox Grid.Row="3" Grid.Column="2" PasswordChar="•" Text="{Binding ApiKey}" AutomationProperties.Name="{loc:Loc Summary.ApiKey}" />
+
+            <TextBlock Grid.Row="4" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Context}" />
+            <NumericUpDown Grid.Row="5" Minimum="{Binding MinContextTokens}" Maximum="{Binding MaxContextTokens}" Increment="1024"
+                           FormatString="0" Value="{Binding ContextTokens}" AutomationProperties.Name="{loc:Loc Summary.Context}" />
+            <TextBlock Grid.Row="5" Grid.Column="2" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:Loc Summary.ContextHint}" />
+
+            <TextBlock Grid.Row="6" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.EmbeddingModel}" />
+            <ComboBox Grid.Row="7" HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedEmbeddingModel}"
+                      PlaceholderText="{loc:Loc Summary.NoEmbeddingModel}" AutomationProperties.Name="{loc:Loc Summary.EmbeddingModel}" />
+            <TextBlock Grid.Row="7" Grid.Column="2" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:Loc Summary.EmbeddingHint}" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="success" Classes.danger="{Binding IsStatusError}" TextWrapping="Wrap" VerticalAlignment="Center"
+                       Text="{Binding Status}" IsVisible="{Binding HasStatus}" />
+            <Button Grid.Column="1" Classes="outline" Margin="12,0,0,0" Command="{Binding CheckCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <controls:IconView Classes="small" IconKey="Icon.Refresh" />
+                <TextBlock Text="{loc:Loc Summary.Check}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- Where the data lives. -->
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3" VerticalAlignment="Center">
+          <TextBlock Classes="muted" FontSize="12" Text="{loc:Loc Settings.DataFolder}" />
+          <SelectableTextBlock Classes="mono" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" TextWrapping="Wrap" Text="{Binding DataDirectory}" />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="outline" VerticalAlignment="Center" Command="{Binding OpenDataFolderCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <controls:IconView Classes="small" IconKey="Icon.Folder" />
+            <TextBlock Text="{loc:Loc Settings.OpenDataFolder}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

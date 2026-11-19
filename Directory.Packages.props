@@ -1,0 +1,55 @@
+<Project>
+
+  <!--
+    Central package management: projects reference packages without a version, the version lives here.
+    Every dependency must be free software compatible with GPL-3.0-or-later.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup Label="UI">
+    <PackageVersion Include="Avalonia" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="12.1.2" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <!--
+    Speech recognition: the .NET bindings of whisper.cpp (MIT). The CPU runtime is there everywhere (on macOS arm64 it
+    also carries Metal); the Vulkan runtime runs the model on any GPU of Windows and Linux.
+  -->
+  <ItemGroup Label="Speech">
+    <PackageVersion Include="Whisper.net" Version="1.9.1" />
+    <PackageVersion Include="Whisper.net.Runtime" Version="1.9.1" />
+    <PackageVersion Include="Whisper.net.Runtime.Vulkan" Version="1.9.1" />
+  </ItemGroup>
+
+  <!--
+    The database of the history in the data folder: the ADO.NET provider of SQLite (MIT) with its bundled native SQLite
+    (public domain) through SQLitePCLRaw (Apache-2.0).
+  -->
+  <ItemGroup Label="Storage">
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+  </ItemGroup>
+
+  <!--
+    The player of the kept sound: the native OpenAL Soft library (LGPL-2.0-or-later, loaded dynamically) for every
+    platform; the few functions Voicer needs are bound by the application itself.
+  -->
+  <ItemGroup Label="Playback">
+    <PackageVersion Include="Silk.NET.OpenAL.Soft.Native" Version="1.23.1" />
+  </ItemGroup>
+
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="FluentAssertions" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+  </ItemGroup>
+
+</Project>

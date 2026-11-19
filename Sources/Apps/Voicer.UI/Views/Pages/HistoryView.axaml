@@ -1,0 +1,150 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Voicer.UI.Localization"
+             xmlns:vm="using:Voicer.UI.ViewModels.Pages"
+             xmlns:items="using:Voicer.UI.ViewModels.Items"
+             xmlns:controls="using:Voicer.UI.Controls"
+             x:Class="Voicer.UI.Views.Pages.HistoryView"
+             x:DataType="vm:HistoryViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="32,26,32,32" Spacing="18" MaxWidth="900">
+
+      <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Classes="page-title" Text="{loc:Loc History.Title}" />
+          <Arc Classes="busy-ring" Width="14" Height="14" VerticalAlignment="Center" IsVisible="{Binding IsLoading}" />
+        </StackPanel>
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Loc History.Hint}" />
+      </StackPanel>
+
+      <!-- A failure of the database: the list could not be read, a record could not be opened or deleted. -->
+      <Border Classes="banner error" IsVisible="{Binding HasError}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <controls:IconView IconKey="Icon.Alert" Foreground="{StaticResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Top" />
+          <SelectableTextBlock Grid.Column="1" Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="icon" Padding="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding DismissErrorCommand}" ToolTip.Tip="{loc:Loc Common.Hide}">
+            <controls:IconView Classes="small" IconKey="Icon.X" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- The search: words, "a phrase" or a question; the model answers from the records with their sources. -->
+      <Border Classes="card" Padding="16,12" DataContext="{Binding Search}" x:DataType="items:HistorySearchViewModel">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Text="{Binding Query}" PlaceholderText="{loc:Loc Search.Placeholder}" VerticalAlignment="Center"
+                   AutomationProperties.Name="{loc:Loc Search.Placeholder}">
+            <TextBox.KeyBindings>
+              <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+            </TextBox.KeyBindings>
+          </TextBox>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="10,0,0,0" VerticalAlignment="Center">
+            <Button Classes="accent" Command="{Binding SearchCommand}" IsVisible="{Binding !IsWorking}" Content="{loc:Loc Search.Find}" />
+            <Button Classes="outline" Command="{Binding AskCommand}" IsVisible="{Binding !IsWorking}" Content="{loc:Loc Search.Ask}" />
+            <Button Classes="outline" Command="{Binding CancelCommand}" IsVisible="{Binding IsWorking}" Content="{loc:Loc Common.Cancel}" />
+            <Button Classes="icon" Command="{Binding ClearCommand}" IsVisible="{Binding IsActive}"
+                    ToolTip.Tip="{loc:Loc Search.Clear}" AutomationProperties.Name="{loc:Loc Search.Clear}">
+              <controls:IconView IconKey="Icon.X" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- The results of the search: the answer of the model, then the passages, each opening its record at its moment. -->
+      <StackPanel Spacing="12" IsVisible="{Binding IsActive}" DataContext="{Binding Search}" x:DataType="items:HistorySearchViewModel">
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasStatus}">
+          <Arc Classes="busy-ring" Width="12" Height="12" VerticalAlignment="Center" IsVisible="{Binding IsWorking}" />
+          <TextBlock Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding Status}" />
+        </StackPanel>
+        <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+
+        <Border Classes="card" IsVisible="{Binding HasAnswer}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="{loc:Loc Search.Answer}" />
+            <SelectableTextBlock TextWrapping="Wrap" FontSize="14" LineHeight="22" Text="{Binding Answer}" />
+          </StackPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Hits}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="items:SearchHitViewModel">
+              <Border Classes="card" Margin="0,0,0,10" Padding="18,14" Cursor="Hand" DoubleTapped="OnHitDoubleTapped">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                  <TextBlock Classes="section" Margin="0,0,12,0" Foreground="{StaticResource AccentHoverBrush}"
+                             Text="{Binding NumberText}" IsVisible="{Binding HasNumber}" />
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="section" Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" Text="{Binding Details}" />
+                    <TextBlock Classes="secondary" TextWrapping="Wrap" MaxLines="4" TextTrimming="CharacterEllipsis" Text="{Binding Text}" />
+                  </StackPanel>
+                  <Button Grid.Column="2" Classes="outline" Margin="12,0,0,0" VerticalAlignment="Center" Command="{Binding OpenCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Play" />
+                      <TextBlock Text="{loc:Loc Search.Open}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <Border Classes="card">
+        <Border.IsVisible>
+          <MultiBinding Converter="{x:Static BoolConverters.And}">
+            <Binding Path="IsEmpty" />
+            <Binding Path="!Search.IsActive" />
+          </MultiBinding>
+        </Border.IsVisible>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <controls:IconView IconKey="Icon.History" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:Loc History.Empty}" />
+        </StackPanel>
+      </Border>
+
+      <!-- The records, the newest first: a double click or the button opens one. -->
+      <ItemsControl ItemsSource="{Binding Entries}" IsVisible="{Binding !Search.IsActive}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="items:HistoryItemViewModel">
+            <Border Classes="card" Margin="0,0,0,10" Padding="18,14" Cursor="Hand" DoubleTapped="OnRecordDoubleTapped">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="badge" VerticalAlignment="Top" ToolTip.Tip="{Binding KindText}">
+                  <controls:IconView IconKey="{Binding KindIcon}" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="4" Margin="14,0,18,0" VerticalAlignment="Center">
+                  <!-- A long name is cut with an ellipsis, so it never runs into the marks or the buttons. -->
+                  <Grid ColumnDefinitions="*,Auto,Auto">
+                    <TextBlock Classes="section" Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                               ToolTip.Tip="{Binding SourceName}" />
+                    <Border Grid.Column="1" Classes="tag" Margin="10,0,0,0" Classes.accent="{Binding IsGeneration}">
+                      <TextBlock Text="{Binding KindText}" />
+                    </Border>
+                    <controls:IconView Grid.Column="2" Classes="small" IconKey="Icon.Speaker" Foreground="{StaticResource AccentHoverBrush}" Margin="8,0,0,0"
+                                       VerticalAlignment="Center" IsVisible="{Binding HasAudio}" ToolTip.Tip="{loc:Loc History.HasAudio}" />
+                  </Grid>
+                  <TextBlock Classes="muted" Text="{Binding Details}" TextWrapping="Wrap" />
+                  <TextBlock Classes="secondary" Text="{Binding Preview}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Button Classes="outline" Command="{Binding OpenCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Eye" />
+                      <TextBlock Text="{loc:Loc History.Open}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                  <Button Classes="icon danger-hover" Command="{Binding DeleteCommand}"
+                          ToolTip.Tip="{loc:Loc History.Delete}" AutomationProperties.Name="{loc:Loc History.Delete}">
+                    <controls:IconView IconKey="Icon.Trash" />
+                  </Button>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

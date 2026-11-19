@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sources\Apps\Voicer.UI\Voicer.UI.csproj" />
+  </ItemGroup>
+
+</Project>

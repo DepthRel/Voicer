@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The database of the application in the data folder (SQLite): the history of the recognitions. Deleted data is
+    overwritten and the file gives the freed space back.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

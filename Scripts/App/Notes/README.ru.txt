@@ -1,0 +1,17 @@
+Voicer {version} ({runtime}): речь в текст
+
+[win] Запуск: Voicer.exe в этой папке (на него можно сделать ярлык или закрепить на панели задач).
+[unix] Запуск: ./Voicer.sh
+[linux] Меню приложений: один раз запустите ./install-desktop-entry.sh.
+[macos] Или двойной щелчок по Voicer.command.
+Модели, инструменты, настройки и история распознанных текстов (voicer.db) хранятся в папке Data рядом с программой. Модель Whisper (от Large v3, 2,9 ГБ, до Small Q5, 180 МБ) скачивается один раз — в настройках.
+Генерация голоса: один раз установите в настройках llama.cpp и модель голоса (Qwen3-TTS, Chatterbox, Kokoro); затем вставьте текст на вкладке «Генерация», прослушайте озвучку и сохраните её в WAV.
+[win] При установке для всех пользователей они лежат в %LOCALAPPDATA%\Voicer\Data каждого пользователя.
+[win] FFmpeg, который читает звук из аудио- и видеофайлов, ставится из настроек одной кнопкой.
+[linux] Установите FFmpeg менеджером пакетов: sudo apt install ffmpeg (или dnf, pacman, ...). Видеокарта используется через Vulkan (libvulkan1).
+[macos] Установите FFmpeg через Homebrew: brew install ffmpeg.
+[win] Windows покажет предупреждение SmartScreen, пока сборка не подписана.
+[macos] Сборка не подписана Apple. Перед первым запуском выполните в этой папке: xattr -dr com.apple.quarantine .
+[macos] Если macOS всё равно не запускает программу, подпишите её на этом Mac: find . -type f \( -perm -u+x -o -name "*.dylib" \) -exec codesign --force --sign - {} \;
+Voicer — свободная программа под лицензией GNU GPL версии 3 или более поздней (LICENSE.txt); компоненты других авторов и их лицензии перечислены в THIRD-PARTY-NOTICES.txt.
+Проект: https://github.com/DepthRel/Voicer

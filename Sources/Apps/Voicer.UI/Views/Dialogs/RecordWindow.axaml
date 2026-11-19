@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Voicer.UI.Localization"
+        xmlns:vm="using:Voicer.UI.ViewModels.Dialogs"
+        xmlns:controls="using:Voicer.UI.Controls"
+        xmlns:views="using:Voicer.UI.Views.Controls"
+        x:Class="Voicer.UI.Views.Dialogs.RecordWindow"
+        x:DataType="vm:RecordViewModel"
+        Title="{Binding Title}"
+        Icon="avares://Voicer.UI/Assets/voicer.ico"
+        Width="960" Height="720" MinWidth="620" MinHeight="420"
+        WindowStartupLocation="CenterOwner">
+
+  <Panel>
+    <Border Background="{StaticResource WindowHaloBrush}" IsHitTestVisible="False" />
+
+    <Grid RowDefinitions="Auto,Auto,3*,Auto,2*,Auto,Auto" Margin="22,18,22,18">
+      <StackPanel Spacing="3" Margin="0,0,0,12">
+        <TextBlock Classes="page-title" FontSize="17" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="muted" Text="{Binding Details}" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <!-- The player of the kept sound: back, play or pause, forward, the position, the volume and the speed. -->
+      <Border Grid.Row="1" Classes="card" Padding="16,12" Margin="0,0,0,12" IsVisible="{Binding HasPlayer}">
+        <views:PlayerView DataContext="{Binding Player}" />
+      </Border>
+
+      <TextBlock Grid.Row="1" Classes="muted" Margin="0,0,0,12" TextWrapping="Wrap"
+                 Text="{Binding AudioNote}" IsVisible="{Binding HasAudioNote}" />
+
+      <TextBox Grid.Row="2" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+               FontSize="14" LineHeight="22"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"
+               Text="{Binding Text}"
+               AutomationProperties.Name="{loc:Loc Result.Text}" />
+
+      <!-- The summary: the kept one, or the one the model is writing; written again on demand. -->
+      <Panel Grid.Row="3" IsVisible="{Binding HasSummary}">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,8"
+              DataContext="{Binding Summary}" x:DataType="vm:SummaryPanelViewModel">
+          <StackPanel Spacing="2" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="section" Text="{loc:Loc Record.Summary}" />
+              <Arc Classes="busy-ring" Width="12" Height="12" VerticalAlignment="Center" IsVisible="{Binding IsWorking}" />
+            </StackPanel>
+            <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding Details}" />
+            <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+            <Button Classes="outline" Command="{Binding SummarizeCommand}" IsVisible="{Binding !IsWorking}" Content="{Binding SummarizeLabel}" />
+            <Button Classes="outline" Command="{Binding CancelCommand}" IsVisible="{Binding IsWorking}" Content="{loc:Loc Common.Cancel}" />
+          </StackPanel>
+        </Grid>
+      </Panel>
+
+      <TextBox Grid.Row="4" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+               FontSize="14" LineHeight="22"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"
+               IsVisible="{Binding HasSummary}"
+               Text="{Binding Summary.Text}"
+               AutomationProperties.Name="{loc:Loc Record.Summary}" />
+
+      <TextBlock Grid.Row="5" Margin="0,10,0,0" TextWrapping="Wrap"
+                 Classes="success" Classes.danger="{Binding IsStatusError}"
+                 Text="{Binding Status}" IsVisible="{Binding HasStatus}" />
+
+      <StackPanel Grid.Row="6" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" Margin="0,14,0,0">
+        <Button Classes="accent" Command="{Binding ExportCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <controls:IconView Classes="small" IconKey="Icon.Export" Foreground="White" />
+            <TextBlock Text="{loc:Loc Result.Export}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="outline" Content="{loc:Loc Common.Close}" IsCancel="True" Click="OnCloseClick" />
+      </StackPanel>
+    </Grid>
+  </Panel>
+</Window>

@@ -1,0 +1,38 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:pages="using:Voicer.UI.ViewModels.Pages"
+             xmlns:views="using:Voicer.UI.Views.Pages"
+             x:Class="Voicer.UI.App"
+             Name="Voicer"
+             RequestedThemeVariant="Dark">
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Voicer.UI/Themes/Colors.axaml" />
+        <ResourceInclude Source="avares://Voicer.UI/Themes/Icons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Voicer.UI/Themes/Controls.axaml" />
+  </Application.Styles>
+
+  <Application.DataTemplates>
+    <DataTemplate DataType="pages:TranscriptionViewModel">
+      <views:TranscriptionView />
+    </DataTemplate>
+    <DataTemplate DataType="pages:GenerationViewModel">
+      <views:GenerationView />
+    </DataTemplate>
+    <DataTemplate DataType="pages:HistoryViewModel">
+      <views:HistoryView />
+    </DataTemplate>
+    <DataTemplate DataType="pages:SettingsViewModel">
+      <views:SettingsView />
+    </DataTemplate>
+  </Application.DataTemplates>
+
+</Application>

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sources\Core\Voicer.Core\Voicer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

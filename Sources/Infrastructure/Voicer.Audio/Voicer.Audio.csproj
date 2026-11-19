@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The player of the sound kept with a text: FFmpeg decodes it (Voicer.Media) and OpenAL Soft plays it. The native
+    library comes from the package; the functions are bound here, so no managed wrapper is needed.
+  -->
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Silk.NET.OpenAL.Soft.Native" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+    <ProjectReference Include="..\Voicer.Media\Voicer.Media.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Voicer.Audio.Tests" />
+  </ItemGroup>
+
+</Project>

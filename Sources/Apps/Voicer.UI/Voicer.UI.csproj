@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The desktop application. The same program is also the worker that runs the speech engine: started with
+    the worker switch as the first argument (see WorkerProtocol) it opens no window, so a native failure of a video driver ends
+    only that process.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\voicer.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Voicer.Audio\Voicer.Audio.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Voicer.Downloads\Voicer.Downloads.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Voicer.LanguageModels\Voicer.LanguageModels.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Voicer.Media\Voicer.Media.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Voicer.Storage\Voicer.Storage.csproj" />
+    <ProjectReference Include="..\..\Speech\Voicer.Speech.Llama\Voicer.Speech.Llama.csproj" />
+    <ProjectReference Include="..\..\Speech\Voicer.Speech.Whisper\Voicer.Speech.Whisper.csproj" />
+  </ItemGroup>
+
+  <!--
+    The launcher of a package root: the same application host (with the Voicer icon) pointing at ui\Voicer.UI.dll, so
+    the root of a package holds one Voicer.exe next to the ui folder. Publish with -p:VoicerRootLauncherPath=...
+  -->
+  <Target Name="VoicerRootLauncher" AfterTargets="Publish" DependsOnTargets="_GetAppHostPaths"
+          Condition="'$(VoicerRootLauncherPath)' != '' and '$(AppHostSourcePath)' != ''">
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(VoicerRootLauncherPath)"
+                   AppBinaryName="ui\$(AssemblyName)$(TargetExt)"
+                   IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+                   WindowsGraphicalUserInterface="true"
+                   Retries="$(CopyRetryCount)"
+                   RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)" />
+  </Target>
+
+</Project>

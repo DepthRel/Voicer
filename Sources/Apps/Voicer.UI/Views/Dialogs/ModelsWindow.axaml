@@ -1,0 +1,123 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Voicer.UI.Localization"
+        xmlns:vm="using:Voicer.UI.ViewModels.Dialogs"
+        xmlns:items="using:Voicer.UI.ViewModels.Items"
+        xmlns:controls="using:Voicer.UI.Controls"
+        x:Class="Voicer.UI.Views.Dialogs.ModelsWindow"
+        x:DataType="vm:ModelCatalogViewModel"
+        Title="{Binding Title}"
+        Icon="avares://Voicer.UI/Assets/voicer.ico"
+        Width="880" Height="740" MinWidth="620" MinHeight="420"
+        WindowStartupLocation="CenterOwner">
+
+  <Panel>
+    <Border Background="{StaticResource WindowHaloBrush}" IsHitTestVisible="False" />
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="22,18,22,18">
+      <StackPanel Spacing="4" Margin="0,0,0,14">
+        <TextBlock Classes="page-title" FontSize="17" Text="{Binding Title}" />
+        <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding Hint}" />
+      </StackPanel>
+
+      <!-- A card per model: dim until it is downloaded, then lit and marked as received. -->
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Models}" Margin="0,0,6,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="items:ModelCardViewModel">
+              <Border Classes="model-card" Classes.installed="{Binding IsInstalled}" Margin="0,0,0,10">
+                <StackPanel Spacing="10">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="5">
+                      <WrapPanel Orientation="Horizontal">
+                        <TextBlock Classes="section" Margin="0,0,10,0" VerticalAlignment="Center" Text="{Binding Name}" />
+                        <TextBlock Classes="muted" Margin="0,0,10,0" VerticalAlignment="Center" Text="{Binding SizeText}" />
+                        <Border Classes="tag" Margin="0,0,6,0" IsVisible="{Binding RunsOnCpu}" ToolTip.Tip="{loc:Loc Models.RunsOnCpuHint}">
+                          <StackPanel Orientation="Horizontal" Spacing="5">
+                            <controls:IconView Classes="small" IconKey="Icon.Cpu" />
+                            <TextBlock Text="{loc:Loc Models.RunsOnCpu}" />
+                          </StackPanel>
+                        </Border>
+                      </WrapPanel>
+                      <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding Description}" />
+
+                      <!-- What only one kind of model has: the quantization of Whisper, the languages and voices of a voice model. -->
+                      <ContentControl Content="{Binding}">
+                        <ContentControl.DataTemplates>
+                          <DataTemplate DataType="items:ModelItemViewModel">
+                            <StackPanel Spacing="6" Margin="0,4,0,0">
+                              <Grid ColumnDefinitions="Auto,Auto,*">
+                                <TextBlock Classes="muted" VerticalAlignment="Center" Margin="0,0,10,0" Text="{loc:Loc Models.Quantization}" />
+                                <ComboBox Grid.Column="1" MinWidth="220"
+                                          ItemsSource="{Binding Variants}"
+                                          SelectedItem="{Binding SelectedVariant}"
+                                          IsEnabled="{Binding CanChooseVariant}"
+                                          AutomationProperties.Name="{loc:Loc Models.Quantization}">
+                                  <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="items:ModelVariantViewModel">
+                                      <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                        <TextBlock Classes="muted" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                                        <controls:IconView Classes="small" IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" />
+                                      </StackPanel>
+                                    </DataTemplate>
+                                  </ComboBox.ItemTemplate>
+                                </ComboBox>
+                              </Grid>
+                              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding QuantizationDescription}" />
+                            </StackPanel>
+                          </DataTemplate>
+                          <DataTemplate DataType="items:VoiceModelItemViewModel">
+                            <WrapPanel Orientation="Horizontal" Margin="0,2,0,0">
+                              <Border Classes="tag accent" Margin="0,0,6,0">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                  <controls:IconView Classes="small" IconKey="Icon.Globe" />
+                                  <TextBlock Text="{Binding LanguagesText}" />
+                                </StackPanel>
+                              </Border>
+                              <Border Classes="tag accent" Margin="0,0,6,0" IsVisible="{Binding CanCloneVoice}" ToolTip.Tip="{loc:Loc VoiceModels.ClonesVoiceHint}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                  <controls:IconView Classes="small" IconKey="Icon.Mic" />
+                                  <TextBlock Text="{loc:Loc VoiceModels.ClonesVoice}" />
+                                </StackPanel>
+                              </Border>
+                            </WrapPanel>
+                          </DataTemplate>
+                        </ContentControl.DataTemplates>
+                      </ContentControl>
+
+                      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasStatus}">
+                        <controls:IconView Classes="small" IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" />
+                        <TextBlock Classes="muted" Classes.success="{Binding IsInstalled}" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding StatusText}" />
+                      </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="12,0,0,0">
+                      <Button Classes="icon" Command="{Binding OpenFolderCommand}" IsVisible="{Binding IsInstalled}"
+                              ToolTip.Tip="{loc:Loc Models.OpenFolder}" AutomationProperties.Name="{loc:Loc Models.OpenFolder}">
+                        <controls:IconView IconKey="Icon.Folder" />
+                      </Button>
+                      <Button Classes="accent" Command="{Binding DownloadCommand}" IsVisible="{Binding !IsInstalled}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <controls:IconView Classes="small" IconKey="Icon.Download" Foreground="White" />
+                          <TextBlock Text="{Binding DownloadLabel}" VerticalAlignment="Center" />
+                        </StackPanel>
+                      </Button>
+                      <Button Classes="outline" Command="{Binding CancelCommand}" IsVisible="{Binding IsDownloading}"
+                              Content="{loc:Loc Common.Cancel}" />
+                    </StackPanel>
+                  </Grid>
+                  <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" IsVisible="{Binding IsDownloading}" />
+                  <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <Button Grid.Row="2" Classes="outline" HorizontalAlignment="Right" Margin="0,14,0,0"
+              Content="{loc:Loc Common.Close}" IsCancel="True" Click="OnCloseClick" />
+    </Grid>
+  </Panel>
+</Window>

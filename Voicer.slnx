@@ -1,0 +1,33 @@
+<Solution>
+  <Folder Name="/Sources/Apps/">
+    <Project Path="Sources/Apps/Voicer.UI/Voicer.UI.csproj" />
+  </Folder>
+  <Folder Name="/Sources/Core/">
+    <Project Path="Sources/Core/Voicer.Core/Voicer.Core.csproj" />
+    <Project Path="Sources/Core/Voicer.Localization/Voicer.Localization.csproj" />
+  </Folder>
+  <Folder Name="/Sources/Infrastructure/">
+    <Project Path="Sources/Infrastructure/Voicer.Audio/Voicer.Audio.csproj" />
+    <Project Path="Sources/Infrastructure/Voicer.Downloads/Voicer.Downloads.csproj" />
+    <Project Path="Sources/Infrastructure/Voicer.LanguageModels/Voicer.LanguageModels.csproj" />
+    <Project Path="Sources/Infrastructure/Voicer.Media/Voicer.Media.csproj" />
+    <Project Path="Sources/Infrastructure/Voicer.Storage/Voicer.Storage.csproj" />
+  </Folder>
+  <Folder Name="/Sources/Speech/">
+    <Project Path="Sources/Speech/Voicer.Speech.Llama/Voicer.Speech.Llama.csproj" />
+    <Project Path="Sources/Speech/Voicer.Speech.Whisper/Voicer.Speech.Whisper.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Voicer.Audio.Tests/Voicer.Audio.Tests.csproj" />
+    <Project Path="Tests/Voicer.Conventions.Tests/Voicer.Conventions.Tests.csproj" />
+    <Project Path="Tests/Voicer.Core.Tests/Voicer.Core.Tests.csproj" />
+    <Project Path="Tests/Voicer.Downloads.Tests/Voicer.Downloads.Tests.csproj" />
+    <Project Path="Tests/Voicer.LanguageModels.Tests/Voicer.LanguageModels.Tests.csproj" />
+    <Project Path="Tests/Voicer.Localization.Tests/Voicer.Localization.Tests.csproj" />
+    <Project Path="Tests/Voicer.Media.Tests/Voicer.Media.Tests.csproj" />
+    <Project Path="Tests/Voicer.Speech.Llama.Tests/Voicer.Speech.Llama.Tests.csproj" />
+    <Project Path="Tests/Voicer.Speech.Whisper.Tests/Voicer.Speech.Whisper.Tests.csproj" />
+    <Project Path="Tests/Voicer.Storage.Tests/Voicer.Storage.Tests.csproj" />
+    <Project Path="Tests/Voicer.UI.Tests/Voicer.UI.Tests.csproj" />
+  </Folder>
+</Solution>

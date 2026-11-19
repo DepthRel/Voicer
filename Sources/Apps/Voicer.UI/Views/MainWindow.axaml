@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Voicer.UI.Localization"
+        xmlns:vm="using:Voicer.UI.ViewModels"
+        xmlns:enums="using:Voicer.UI.Enums"
+        xmlns:controls="using:Voicer.UI.Controls"
+        x:Class="Voicer.UI.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Voicer"
+        Width="1080" Height="760" MinWidth="640" MinHeight="560"
+        Icon="avares://Voicer.UI/Assets/voicer.ico"
+        WindowStartupLocation="CenterScreen">
+
+  <Panel>
+    <!-- The faint halo of the accent from the top of the window. -->
+    <Border Background="{StaticResource WindowHaloBrush}" IsHitTestVisible="False" />
+
+    <Grid RowDefinitions="Auto,*">
+
+      <!-- Tab strip: the logo, then a tab per page with an icon above its label and a glowing line under the selected one. -->
+      <Border Grid.Row="0"
+              Background="{StaticResource NavBackgroundBrush}"
+              BorderBrush="{StaticResource DividerBrush}"
+              BorderThickness="0,0,0,1">
+        <Grid ColumnDefinitions="Auto,*" Margin="14,6,14,0">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="4,0,22,6">
+            <Image Source="avares://Voicer.UI/Assets/voicer-256.png" Width="30" Height="30" />
+            <TextBlock Text="Voicer" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+            <Button Classes="nav"
+                    Classes.selected="{Binding IsTranscriptionSelected}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static enums:TabKey.Transcription}"
+                    AutomationProperties.Name="{loc:Loc Tab.Transcription}">
+              <Grid RowDefinitions="*,Auto">
+                <StackPanel Margin="16,9,16,8">
+                  <controls:IconView IconKey="Icon.Mic" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Classes="nav-label" Text="{loc:Loc Tab.Transcription}" />
+                </StackPanel>
+                <Border Grid.Row="1" Classes="indicator" />
+              </Grid>
+            </Button>
+
+            <Button Classes="nav"
+                    Classes.selected="{Binding IsGenerationSelected}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static enums:TabKey.Generation}"
+                    AutomationProperties.Name="{loc:Loc Tab.Generation}">
+              <Grid RowDefinitions="*,Auto">
+                <StackPanel Margin="16,9,16,8">
+                  <controls:IconView IconKey="Icon.Speaker" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Classes="nav-label" Text="{loc:Loc Tab.Generation}" />
+                </StackPanel>
+                <Border Grid.Row="1" Classes="indicator" />
+              </Grid>
+            </Button>
+
+            <Button Classes="nav"
+                    Classes.selected="{Binding IsHistorySelected}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static enums:TabKey.History}"
+                    AutomationProperties.Name="{loc:Loc Tab.History}">
+              <Grid RowDefinitions="*,Auto">
+                <StackPanel Margin="16,9,16,8">
+                  <controls:IconView IconKey="Icon.History" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Classes="nav-label" Text="{loc:Loc Tab.History}" />
+                </StackPanel>
+                <Border Grid.Row="1" Classes="indicator" />
+              </Grid>
+            </Button>
+
+            <Button Classes="nav"
+                    Classes.selected="{Binding IsSettingsSelected}"
+                    Command="{Binding SelectTabCommand}"
+                    CommandParameter="{x:Static enums:TabKey.Settings}"
+                    AutomationProperties.Name="{loc:Loc Tab.Settings}">
+              <Grid RowDefinitions="*,Auto">
+                <StackPanel Margin="16,9,16,8">
+                  <controls:IconView IconKey="Icon.Settings" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Classes="nav-label" Text="{loc:Loc Tab.Settings}" />
+                </StackPanel>
+                <Border Grid.Row="1" Classes="indicator" />
+              </Grid>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <ContentControl Grid.Row="1" Content="{Binding CurrentPage}" />
+    </Grid>
+  </Panel>
+</Window>

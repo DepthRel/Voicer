@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Voicer.UI.Localization"
+             xmlns:vm="using:Voicer.UI.ViewModels.Dialogs"
+             xmlns:controls="using:Voicer.UI.Controls"
+             x:Class="Voicer.UI.Views.Controls.PlayerView"
+             x:DataType="vm:PlayerViewModel">
+
+  <!-- The player of a sound: back, play or pause, forward, the position, the volume and the speed. -->
+  <StackPanel Spacing="8">
+    <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+      <Button Classes="icon" Command="{Binding BackCommand}" VerticalAlignment="Center"
+              ToolTip.Tip="{loc:Loc Player.Back}" AutomationProperties.Name="{loc:Loc Player.Back}">
+        <controls:IconView IconKey="Icon.Back" />
+      </Button>
+      <Button Grid.Column="1" Classes="accent" Margin="6,0" Padding="12,8" VerticalAlignment="Center"
+              Command="{Binding TogglePlayCommand}"
+              ToolTip.Tip="{loc:Loc Player.PlayPause}" AutomationProperties.Name="{loc:Loc Player.PlayPause}">
+        <Panel>
+          <controls:IconView IconKey="Icon.Play" Foreground="White" IsVisible="{Binding !IsPlaying}" />
+          <controls:IconView IconKey="Icon.Pause" Foreground="White" IsVisible="{Binding IsPlaying}" />
+        </Panel>
+      </Button>
+      <Button Grid.Column="2" Classes="icon" Command="{Binding ForwardCommand}" VerticalAlignment="Center"
+              ToolTip.Tip="{loc:Loc Player.Forward}" AutomationProperties.Name="{loc:Loc Player.Forward}">
+        <controls:IconView IconKey="Icon.Forward" />
+      </Button>
+      <Slider Grid.Column="3" Margin="14,0" VerticalAlignment="Center"
+              Minimum="0" Maximum="{Binding DurationSeconds}" Value="{Binding PositionSeconds}"
+              AutomationProperties.Name="{loc:Loc Player.Position}" />
+      <TextBlock Grid.Column="4" Classes="mono secondary" VerticalAlignment="Center" Text="{Binding TimeText}" />
+    </Grid>
+
+    <Grid ColumnDefinitions="Auto,160,*,Auto,Auto">
+      <!-- The volume: the button turns the sound off and back on; the slider at zero is the sound off too. -->
+      <Button Classes="icon" Padding="5" VerticalAlignment="Center" Command="{Binding ToggleMuteCommand}"
+              ToolTip.Tip="{loc:Loc Player.Mute}" AutomationProperties.Name="{loc:Loc Player.Mute}">
+        <Panel>
+          <controls:IconView Classes="small" IconKey="Icon.Speaker" Foreground="{StaticResource AccentHoverBrush}" IsVisible="{Binding !IsMuted}" />
+          <controls:IconView Classes="small" IconKey="Icon.SpeakerOff" Foreground="{StaticResource TextMutedBrush}" IsVisible="{Binding IsMuted}" />
+        </Panel>
+      </Button>
+      <Slider Grid.Column="1" Margin="8,0" VerticalAlignment="Center" Minimum="0" Maximum="100"
+              Value="{Binding Volume}" AutomationProperties.Name="{loc:Loc Player.Volume}" />
+      <TextBlock Grid.Column="3" Classes="muted" Margin="0,0,10,0" VerticalAlignment="Center" Text="{loc:Loc Player.Speed}" />
+      <ComboBox Grid.Column="4" MinWidth="88" VerticalAlignment="Center" VerticalContentAlignment="Center"
+                ItemsSource="{Binding Speeds}" SelectedItem="{Binding SelectedSpeed}"
+                AutomationProperties.Name="{loc:Loc Player.Speed}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:SpeedOptionViewModel">
+            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
+    </Grid>
+
+    <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding Error}" IsVisible="{Binding HasError}" />
+  </StackPanel>
+</UserControl>

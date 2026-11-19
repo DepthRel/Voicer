@@ -1,0 +1,63 @@
+<Project>
+
+  <!--
+    Shared build settings for every Voicer project.
+    GenerateDocumentationFile together with CS1591 in WarningsAsErrors makes a missing XML documentation comment
+    a build error, which enforces the documentation rule from AGENTS.md. EnforceCodeStyleInBuild runs the code style
+    rules of .editorconfig (braces, namespaces, naming, unused usings) in every build, not only in the editor.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591;nullable</WarningsAsErrors>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <!-- The identity of the product: the installer and the file properties of the executables read it from here. -->
+  <PropertyGroup>
+    <Product>Voicer</Product>
+    <Authors>DepthRel</Authors>
+    <Copyright>Copyright © Voicer contributors. Licensed under GPL-3.0-or-later.</Copyright>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <Version>0.1.0</Version>
+    <!-- The page of the project; the installer shows it as the link of the program in the list of installed apps. -->
+    <PackageProjectUrl>https://github.com/DepthRel/Voicer</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/DepthRel/Voicer</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!--
+    Test projects (Tests/*) are never packed. Their common packages are referenced here, so a test project file only
+    lists project references.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <GenerateProgramFile>true</GenerateProgramFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!--
+    The localizers the tests hand to the code under test; a test names the language of its expectations. The
+    convention tests reference no project of the product, so they go without them.
+  -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) and '$(MSBuildProjectName)' != 'Voicer.Conventions.Tests'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)Sources/Core/Voicer.Localization/Voicer.Localization.csproj" />
+    <Compile Include="$(MSBuildThisFileDirectory)Tests\Shared\TestTexts.cs" Link="Shared\TestTexts.cs" />
+    <Using Include="Voicer.Tests" />
+  </ItemGroup>
+
+</Project>

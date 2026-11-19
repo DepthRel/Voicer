@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Speech recognition with Whisper (whisper.cpp through Whisper.net): the compute devices the engine sees, the
+    recognition itself and the worker host that runs both in a process of its own.
+    The device list reads the ggml library of the runtime Whisper.net loaded through function pointers, so the indexes
+    it gives are exactly the ones the engine takes.
+  -->
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Whisper.net" />
+    <PackageReference Include="Whisper.net.Runtime" />
+    <PackageReference Include="Whisper.net.Runtime.Vulkan" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

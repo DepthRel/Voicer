@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Voicer.UI.Localization"
+             xmlns:vm="using:Voicer.UI.ViewModels.Pages"
+             xmlns:items="using:Voicer.UI.ViewModels.Items"
+             xmlns:models="using:Voicer.Core.Models"
+             xmlns:controls="using:Voicer.UI.Controls"
+             x:Class="Voicer.UI.Views.Pages.TranscriptionView"
+             x:DataType="vm:TranscriptionViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="32,26,32,32" Spacing="18" MaxWidth="900">
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="page-title" Text="{loc:Loc Transcription.Title}" />
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Loc Transcription.Subtitle}" />
+      </StackPanel>
+
+      <!-- A problem: a file of an unknown kind, a missing model or FFmpeg, a failed recognition. -->
+      <Border Classes="banner error" IsVisible="{Binding HasError}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+          <controls:IconView IconKey="Icon.Alert" Foreground="{StaticResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Top" />
+          <SelectableTextBlock Grid.Column="1" Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="outline" Margin="8,0,0,0" Padding="10,4" MinHeight="28" VerticalAlignment="Center"
+                  IsVisible="{Binding CanFixInSettings}"
+                  Content="{loc:Loc Transcription.OpenSettings}" Command="{Binding OpenSettingsCommand}" />
+          <Button Grid.Column="3" Classes="icon" Padding="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding DismissErrorCommand}" ToolTip.Tip="{loc:Loc Common.Hide}">
+            <controls:IconView Classes="small" IconKey="Icon.X" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- 1. The file: dropped here or picked with a click. -->
+      <Border x:Name="DropZone"
+              Classes="drop-zone"
+              MinHeight="170"
+              DragDrop.AllowDrop="True"
+              PointerReleased="OnDropZoneReleased"
+              AutomationProperties.Name="{loc:Loc Transcription.DropTitle}">
+        <Panel>
+          <Rectangle Classes="frame" />
+
+          <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" IsVisible="{Binding !HasSource}">
+            <controls:IconView Classes="large drop-icon" IconKey="Icon.Upload" HorizontalAlignment="Center" />
+            <TextBlock Classes="section" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Text="{loc:Loc Transcription.DropTitle}" />
+            <TextBlock Classes="muted" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Text="{loc:Loc Transcription.DropHint}" />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="Auto,*,Auto" Margin="22" VerticalAlignment="Center" IsVisible="{Binding HasSource}">
+            <Border Classes="badge" Width="48" Height="48" VerticalAlignment="Center">
+              <controls:IconView IconKey="Icon.File" Width="24" Height="24" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="4" Margin="16,0" VerticalAlignment="Center">
+              <TextBlock Classes="section" Text="{Binding SourceName}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" Text="{Binding SourceDetails}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Classes="muted" FontSize="12" Text="{loc:Loc Transcription.ReplaceHint}" />
+            </StackPanel>
+            <Button Grid.Column="2" Classes="icon" VerticalAlignment="Center"
+                    Command="{Binding ClearSourceCommand}"
+                    ToolTip.Tip="{loc:Loc Transcription.ClearSource}"
+                    AutomationProperties.Name="{loc:Loc Transcription.ClearSource}">
+              <controls:IconView IconKey="Icon.X" />
+            </Button>
+          </Grid>
+        </Panel>
+      </Border>
+
+      <!-- 2. The model and the device. -->
+      <Border Classes="card">
+        <Grid ColumnDefinitions="*,20,*" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Classes="field-label" Text="{loc:Loc Transcription.Model}" />
+          <ComboBox Grid.Row="1"
+                    ItemsSource="{Binding Models}"
+                    SelectedItem="{Binding SelectedModel}"
+                    IsEnabled="{Binding IsIdle}"
+                    PlaceholderText="{loc:Loc Transcription.NoModels}"
+                    AutomationProperties.Name="{loc:Loc Transcription.Model}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="models:SpeechModel">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <controls:IconView Classes="small" IconKey="Icon.Model" Foreground="{StaticResource AccentHoverBrush}" />
+                  <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding !HasModels}">
+            <TextBlock Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" Text="{loc:Loc Transcription.NoModelsHint}" />
+            <Button Classes="outline" Padding="10,3" MinHeight="26" Content="{loc:Loc Transcription.OpenSettings}" Command="{Binding OpenSettingsCommand}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <TextBlock Classes="field-label" Text="{loc:Loc Transcription.Device}" />
+            <Arc Classes="busy-ring" Width="11" Height="11" Margin="0,0,0,6" IsVisible="{Binding IsDetectingDevices}" />
+          </StackPanel>
+          <ComboBox Grid.Row="1" Grid.Column="2"
+                    ItemsSource="{Binding Devices}"
+                    SelectedItem="{Binding SelectedDevice}"
+                    IsEnabled="{Binding IsIdle}"
+                    PlaceholderText="{loc:Loc Transcription.DetectingDevices}"
+                    AutomationProperties.Name="{loc:Loc Transcription.Device}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="items:DeviceOptionViewModel">
+                <Grid ColumnDefinitions="Auto,*">
+                  <controls:IconView Classes="small" IconKey="{Binding IconKey}" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,10,0" />
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" FontSize="11.5" Text="{Binding Memory}" IsVisible="{Binding Memory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </Grid>
+      </Border>
+
+      <!-- 3. The recognition: the wide button, then the progress with its cancel, then the result and what to do with it. -->
+      <Button Classes="accent hero"
+              Command="{Binding RecognizeCommand}"
+              IsVisible="{Binding IsIdle}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <controls:IconView IconKey="Icon.Mic" Foreground="White" />
+          <TextBlock Text="{loc:Loc Transcription.Recognize}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+
+      <Border Classes="card" IsVisible="{Binding IsBusy}">
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Spacing="10" VerticalAlignment="Center">
+            <TextBlock Classes="secondary" Text="{Binding StageText}" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" />
+          </StackPanel>
+          <Button Grid.Column="1" Classes="outline" Margin="18,0,0,0" Padding="16,8" VerticalAlignment="Center"
+                  Command="{Binding CancelCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <controls:IconView Classes="small" IconKey="Icon.Stop" />
+              <TextBlock Text="{loc:Loc Common.Cancel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </Grid>
+      </Border>
+
+      <Border Classes="banner success" IsVisible="{Binding HasResult}">
+        <Grid ColumnDefinitions="Auto,*">
+          <controls:IconView IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" Margin="0,0,10,0" />
+          <TextBlock Grid.Column="1" Text="{Binding ResultSummary}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <Grid ColumnDefinitions="*,12,*">
+        <Grid.IsVisible>
+          <MultiBinding Converter="{x:Static BoolConverters.And}">
+            <Binding Path="HasResult" />
+            <Binding Path="IsIdle" />
+          </MultiBinding>
+        </Grid.IsVisible>
+        <Button Classes="outline" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="44"
+                Command="{Binding SummarizeCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="9">
+            <controls:IconView IconKey="Icon.File" />
+            <TextBlock Text="{loc:Loc Transcription.Summarize}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Classes="outline" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="44"
+                Command="{Binding ShowResultCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="9">
+            <controls:IconView IconKey="Icon.Eye" />
+            <TextBlock Text="{loc:Loc Transcription.ShowResult}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

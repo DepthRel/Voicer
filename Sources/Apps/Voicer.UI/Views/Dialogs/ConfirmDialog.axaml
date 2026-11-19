@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="using:Voicer.UI.Localization"
+        xmlns:vm="using:Voicer.UI.ViewModels.Dialogs"
+        xmlns:controls="using:Voicer.UI.Controls"
+        x:Class="Voicer.UI.Views.Dialogs.ConfirmDialog"
+        x:DataType="vm:ConfirmDialogViewModel"
+        Title="{Binding Title}"
+        Icon="avares://Voicer.UI/Assets/voicer.ico"
+        Width="440" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Panel>
+    <Border Background="{StaticResource WindowHaloBrush}" IsHitTestVisible="False" />
+
+    <StackPanel Margin="22,20,22,18" Spacing="16">
+      <Grid ColumnDefinitions="Auto,*">
+        <controls:IconView IconKey="Icon.Alert" Width="22" Height="22" Foreground="{StaticResource DangerBrush}" VerticalAlignment="Top" Margin="0,2,12,0" />
+        <StackPanel Grid.Column="1" Spacing="6">
+          <TextBlock Classes="section" Text="{Binding Title}" TextWrapping="Wrap" />
+          <TextBlock Classes="secondary" Text="{Binding Message}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Grid>
+
+      <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+        <Button Classes="danger" Content="{Binding ConfirmLabel}" Click="OnConfirmClick" />
+        <Button Classes="outline" Content="{loc:Loc Common.Cancel}" IsCancel="True" IsDefault="True" Click="OnCancelClick" />
+      </StackPanel>
+    </StackPanel>
+  </Panel>
+</Window>

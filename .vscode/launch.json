@@ -1,0 +1,31 @@
+{
+  // Pick a profile in "Run and Debug" and press F5. The debug copy keeps its models, tools and settings in
+  // .vscode/dev/data (ignored by git), so a downloaded model survives a clean build.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Voicer",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: UI",
+      "program": "${workspaceFolder}/Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll",
+      "args": [ "--data", "${workspaceFolder}/.vscode/dev/data" ],
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "stopAtEntry": false,
+      "justMyCode": true
+    },
+    {
+      "name": "Worker: devices",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: UI",
+      "program": "${workspaceFolder}/Sources/Apps/Voicer.UI/bin/Debug/net10.0/Voicer.UI.dll",
+      "args": [ "--worker", "devices" ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true
+    }
+  ]
+}

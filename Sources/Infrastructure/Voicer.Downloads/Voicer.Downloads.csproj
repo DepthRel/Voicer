@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Downloads of large files over HTTPS: resumed after a break, checked by their size and SHA-256 before they are used.
+    The speech models are installed with it.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

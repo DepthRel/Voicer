@@ -1,0 +1,228 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="using:Voicer.UI.Localization"
+             xmlns:vm="using:Voicer.UI.ViewModels.Pages"
+             xmlns:items="using:Voicer.UI.ViewModels.Items"
+             xmlns:synthesis="using:Voicer.Core.Synthesis"
+             xmlns:controls="using:Voicer.UI.Controls"
+             xmlns:views="using:Voicer.UI.Views.Controls"
+             x:Class="Voicer.UI.Views.Pages.GenerationView"
+             x:DataType="vm:GenerationViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="32,26,32,32" Spacing="18" MaxWidth="900">
+
+      <StackPanel Spacing="4">
+        <TextBlock Classes="page-title" Text="{loc:Loc Generation.Title}" />
+        <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:Loc Generation.Subtitle}" />
+      </StackPanel>
+
+      <!-- A problem: a missing model or tool, a failed generation. -->
+      <Border Classes="banner error" IsVisible="{Binding HasError}">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+          <controls:IconView IconKey="Icon.Alert" Foreground="{StaticResource DangerBrush}" Margin="0,0,10,0" VerticalAlignment="Top" />
+          <SelectableTextBlock Grid.Column="1" Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <Button Grid.Column="2" Classes="outline" Margin="8,0,0,0" Padding="10,4" MinHeight="28" VerticalAlignment="Center"
+                  IsVisible="{Binding CanFixInSettings}"
+                  Content="{loc:Loc Transcription.OpenSettings}" Command="{Binding OpenSettingsCommand}" />
+          <Button Grid.Column="3" Classes="icon" Padding="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                  Command="{Binding DismissErrorCommand}" ToolTip.Tip="{loc:Loc Common.Hide}">
+            <controls:IconView Classes="small" IconKey="Icon.X" />
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- 1. The model, the device, the language and the voice. -->
+      <Border Classes="card">
+        <StackPanel Spacing="14">
+          <Grid ColumnDefinitions="*,20,*" RowDefinitions="Auto,Auto,Auto">
+            <TextBlock Classes="field-label" Text="{loc:Loc Generation.Model}" />
+            <ComboBox Grid.Row="1"
+                      ItemsSource="{Binding Models}"
+                      SelectedItem="{Binding SelectedModel}"
+                      IsEnabled="{Binding IsIdle}"
+                      PlaceholderText="{loc:Loc Generation.NoModels}"
+                      AutomationProperties.Name="{loc:Loc Generation.Model}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="synthesis:VoiceModel">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <controls:IconView Classes="small" IconKey="Icon.Speaker" Foreground="{StaticResource AccentHoverBrush}" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding !HasModels}">
+              <TextBlock Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap" Text="{loc:Loc Generation.NoModelsHint}" />
+              <Button Classes="outline" Padding="10,3" MinHeight="26" Content="{loc:Loc Transcription.OpenSettings}" Command="{Binding OpenSettingsCommand}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="field-label" Text="{loc:Loc Transcription.Device}" />
+              <Arc Classes="busy-ring" Width="11" Height="11" Margin="0,0,0,6" IsVisible="{Binding IsDetectingDevices}" />
+            </StackPanel>
+            <ComboBox Grid.Row="1" Grid.Column="2"
+                      ItemsSource="{Binding Devices}"
+                      SelectedItem="{Binding SelectedDevice}"
+                      IsEnabled="{Binding IsIdle}"
+                      PlaceholderText="{loc:Loc Transcription.DetectingDevices}"
+                      AutomationProperties.Name="{loc:Loc Transcription.Device}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="items:DeviceOptionViewModel">
+                  <Grid ColumnDefinitions="Auto,*">
+                    <controls:IconView Classes="small" IconKey="{Binding IconKey}" Foreground="{StaticResource AccentHoverBrush}" Margin="0,0,10,0" />
+                    <StackPanel Grid.Column="1">
+                      <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="muted" FontSize="11.5" Text="{Binding Memory}" IsVisible="{Binding Memory, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+
+          <Grid ColumnDefinitions="*,20,*" RowDefinitions="Auto,Auto">
+            <Grid.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                <Binding Path="HasLanguageChoice" />
+                <Binding Path="HasVoices" />
+              </MultiBinding>
+            </Grid.IsVisible>
+            <TextBlock Classes="field-label" Text="{loc:Loc Generation.Language}" IsVisible="{Binding HasLanguageChoice}" />
+            <ComboBox Grid.Row="1"
+                      ItemsSource="{Binding Languages}"
+                      SelectedItem="{Binding SelectedLanguage}"
+                      IsEnabled="{Binding IsIdle}"
+                      IsVisible="{Binding HasLanguageChoice}"
+                      AutomationProperties.Name="{loc:Loc Generation.Language}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="items:SpeechLanguageViewModel">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Grid.Column="2" Classes="field-label" Text="{loc:Loc Generation.Voice}" IsVisible="{Binding HasVoices}" />
+            <ComboBox Grid.Row="1" Grid.Column="2"
+                      ItemsSource="{Binding Voices}"
+                      SelectedItem="{Binding SelectedVoice}"
+                      IsEnabled="{Binding IsIdle}"
+                      IsVisible="{Binding HasVoices}"
+                      AutomationProperties.Name="{loc:Loc Generation.Voice}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="items:VoiceOptionViewModel">
+                  <TextBlock Text="{Binding Title}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+
+          <!-- The sample of the voice: any recording; the model speaks in that voice. -->
+          <Grid ColumnDefinitions="Auto,*,Auto" IsVisible="{Binding CanUseSample}">
+            <Border Classes="badge" VerticalAlignment="Center">
+              <controls:IconView IconKey="Icon.Mic" />
+            </Border>
+            <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+              <TextBlock Classes="section" Text="{loc:Loc Generation.Sample}" />
+              <TextBlock Classes="secondary" TextTrimming="CharacterEllipsis" Text="{Binding SampleName}" IsVisible="{Binding HasSample}" />
+              <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Generation.SampleHint}" />
+              <TextBlock Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Text="{loc:Loc Generation.SampleRecommended}" IsVisible="{Binding ShowSampleHint}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Button Classes="outline" Command="{Binding BrowseSampleCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <controls:IconView Classes="small" IconKey="Icon.Upload" />
+                  <TextBlock Text="{loc:Loc Generation.ChooseSample}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button Classes="icon" Command="{Binding ClearSampleCommand}" IsVisible="{Binding HasSample}"
+                      ToolTip.Tip="{loc:Loc Generation.ClearSample}" AutomationProperties.Name="{loc:Loc Generation.ClearSample}">
+                <controls:IconView IconKey="Icon.X" />
+              </Button>
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- 2. The text to speak. -->
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="field-label" Text="{loc:Loc Generation.Text}" />
+          <TextBox Text="{Binding Text}"
+                   AcceptsReturn="True" TextWrapping="Wrap"
+                   MinHeight="260" MaxHeight="520"
+                   FontSize="14" LineHeight="22"
+                   IsReadOnly="{Binding IsBusy}"
+                   PlaceholderText="{loc:Loc Generation.TextPlaceholder}"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto"
+                   AutomationProperties.Name="{loc:Loc Generation.Text}" />
+          <TextBlock Classes="muted" FontSize="12" Text="{Binding TextStats}" />
+        </StackPanel>
+      </Border>
+
+      <!-- 3. The generation: the button, then the progress, then the result. -->
+      <Grid ColumnDefinitions="Auto,*">
+        <Button Classes="accent" Padding="22,10" MinHeight="42"
+                Command="{Binding GenerateCommand}"
+                IsVisible="{Binding IsIdle}">
+          <StackPanel Orientation="Horizontal" Spacing="9">
+            <controls:IconView IconKey="Icon.Speaker" Foreground="White" />
+            <TextBlock Text="{loc:Loc Generation.Generate}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="outline" Padding="18,10" MinHeight="42"
+                Command="{Binding CancelCommand}"
+                IsVisible="{Binding IsBusy}">
+          <StackPanel Orientation="Horizontal" Spacing="9">
+            <controls:IconView IconKey="Icon.Stop" />
+            <TextBlock Text="{loc:Loc Common.Cancel}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <Border Classes="card" IsVisible="{Binding IsBusy}">
+        <Grid ColumnDefinitions="Auto,*">
+          <!-- A wave of light: the voice is being made. -->
+          <StackPanel Classes="wave" Orientation="Horizontal" Spacing="4" Height="30" VerticalAlignment="Center" Margin="2,0,18,0"
+                      IsVisible="{Binding IsBusy}">
+            <Border Classes="wave-bar w1" />
+            <Border Classes="wave-bar w2" />
+            <Border Classes="wave-bar w3" />
+            <Border Classes="wave-bar w4" />
+            <Border Classes="wave-bar w5" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="10" VerticalAlignment="Center">
+            <TextBlock Classes="secondary" Text="{Binding StageText}" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}" IsIndeterminate="{Binding IsIndeterminate}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Classes="banner success" IsVisible="{Binding HasResult}">
+        <Grid ColumnDefinitions="Auto,*">
+          <controls:IconView IconKey="Icon.Check" Foreground="{StaticResource SuccessBrush}" Margin="0,0,10,0" />
+          <TextBlock Grid.Column="1" Text="{Binding ResultSummary}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+
+      <!-- The result: listened to here, saved where the user chooses; it is in the history already. -->
+      <Border Classes="card" Padding="16,12" IsVisible="{Binding HasResult}">
+        <StackPanel Spacing="12">
+          <Panel IsVisible="{Binding HasPlayer}">
+            <views:PlayerView DataContext="{Binding Player}" />
+          </Panel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="success" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding SaveStatus}" IsVisible="{Binding HasSaveStatus}" />
+            <Button Grid.Column="1" Classes="accent" Margin="12,0,0,0" Command="{Binding SaveCommand}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <controls:IconView Classes="small" IconKey="Icon.Export" Foreground="White" />
+                <TextBlock Text="{loc:Loc Generation.Save}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

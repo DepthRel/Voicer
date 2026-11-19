@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sources\Infrastructure\Voicer.LanguageModels\Voicer.LanguageModels.csproj" />
+  </ItemGroup>
+
+</Project>

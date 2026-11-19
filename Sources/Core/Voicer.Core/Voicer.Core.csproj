@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The core of Voicer: the data folders, the catalog of speech models, compute devices, transcripts and the protocol of
+    the worker process. It knows nothing of the user interface, of the network or of a speech engine.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Voicer.Localization\Voicer.Localization.csproj" />
+  </ItemGroup>
+
+</Project>

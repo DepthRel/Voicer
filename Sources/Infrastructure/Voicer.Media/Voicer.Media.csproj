@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The sound of media files through FFmpeg: finding the program, installing it where the application can, extracting
+    the sound track of any audio or video file as the WAV the speech engine reads, compressing it to be kept with the
+    text, and decoding a kept sound for the player.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
+    <ProjectReference Include="..\Voicer.Downloads\Voicer.Downloads.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Voicer.Media.Tests" />
+  </ItemGroup>
+
+</Project>
