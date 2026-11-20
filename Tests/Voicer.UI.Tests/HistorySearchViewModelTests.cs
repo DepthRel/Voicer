@@ -59,6 +59,8 @@ public sealed class HistorySearchViewModelTests
         _search.Hits[0].Details.Should().Be(TestTexts.Russian.Format("Search.HitDetails", DateTimeOffset.UnixEpoch.ToString("g", TestTexts.Russian.Culture), "0:12", "0:40"));
         _search.Status.Should().Be(TestTexts.Russian.Format("Search.Found", 1));
         _search.HasAnswer.Should().BeFalse();
+        _search.Hits[0].Query.Should().Be("бюджет");
+        _search.Hits[0].Marked.Words.Should().Equal(new TextMark(0, 6));
     }
 
     /// <summary>
@@ -108,20 +110,22 @@ public sealed class HistorySearchViewModelTests
     }
 
     /// <summary>
-    /// A passage opens its record at its moment; going back to the list forgets the results.
+    /// A passage opens its record at the passage, with the query to mark in it; going back to the list forgets the
+    /// results.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
     public async Task Open_PlaysTheRecordFromThePassage()
     {
+        var focus = new RecordFocus(TimeSpan.FromSeconds(12), TimeSpan.FromSeconds(40), "бюджет");
         _service.SearchAsync(default!, default, default).ReturnsForAnyArgs([_hit]);
-        _viewer.OpenAsync(9, Arg.Any<CancellationToken>(), TimeSpan.FromSeconds(12)).Returns(true);
+        _viewer.OpenAsync(9, Arg.Any<CancellationToken>(), focus).Returns(true);
         await _search.SearchCommand.ExecuteAsync(null);
 
         await _search.Hits[0].OpenCommand.ExecuteAsync(null);
         _search.ClearCommand.Execute(null);
 
-        await _viewer.Received(1).OpenAsync(9, Arg.Any<CancellationToken>(), TimeSpan.FromSeconds(12));
+        await _viewer.Received(1).OpenAsync(9, Arg.Any<CancellationToken>(), focus);
         _search.IsActive.Should().BeFalse();
         _search.Hits.Should().BeEmpty();
     }

@@ -6,6 +6,7 @@ Voicer {version} ({runtime}): de fala para texto
 [macos] Ou faça duplo clique em Voicer.command.
 Os modelos, as ferramentas, as definições e o histórico de textos reconhecidos (voicer.db) ficam na pasta Data ao lado do programa. Um modelo Whisper (do Large v3, 2,9 GB, ao Small Q5, 180 MB) é transferido uma só vez, nas definições.
 Geração de voz: instale uma vez nas definições o llama.cpp e um modelo de voz (Qwen3-TTS, Chatterbox, Kokoro); depois cole um texto no separador «Geração», ouça-o e guarde-o em WAV.
+Pesquisa por significado no histórico sem servidor: nas definições, em «Pesquisa por significado», escolha um modelo do Voicer e transfira-o (bge-m3); corre no llama.cpp só enquanto pesquisa, e as definições mostram o seu estado e podem pará-lo.
 [win] Instalado para todos os utilizadores, o Voicer guarda-os em vez disso em %LOCALAPPDATA%\Voicer\Data de cada utilizador.
 [win] O FFmpeg, que lê o som dos ficheiros de áudio e vídeo, é instalado a partir das definições com um clique.
 [linux] Instale o FFmpeg com o gestor de pacotes: sudo apt install ffmpeg (ou dnf, pacman, ...). A placa gráfica é usada através do Vulkan (libvulkan1).

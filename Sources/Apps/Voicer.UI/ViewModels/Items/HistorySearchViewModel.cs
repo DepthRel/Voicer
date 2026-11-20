@@ -127,11 +127,12 @@ public sealed partial class HistorySearchViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task SearchAsync()
     {
+        var query = Query.Trim();
         var token = Begin(_localizer.Get("Search.Searching"), answer: false);
         try
         {
-            var hits = await _search.SearchAsync(Query.Trim(), Indexing(), token);
-            Show(hits, numbered: false);
+            var hits = await _search.SearchAsync(query, Indexing(), token);
+            Show(hits, query, numbered: false);
             Status = hits.Count == 0
                 ? _localizer.Get("Search.NothingFound")
                 : _localizer.Format(_search.SearchesByMeaning ? "Search.Found" : "Search.FoundByWords", hits.Count);
@@ -165,6 +166,7 @@ public sealed partial class HistorySearchViewModel : ObservableObject
             return;
         }
 
+        var query = Query.Trim();
         var token = Begin(_localizer.Get("Search.Asking"), answer: true);
         var arriving = new Progress<string>(text =>
         {
@@ -177,9 +179,9 @@ public sealed partial class HistorySearchViewModel : ObservableObject
 
         try
         {
-            var result = await _search.AskAsync(Query.Trim(), Indexing(), arriving, token);
+            var result = await _search.AskAsync(query, Indexing(), arriving, token);
             Answer = result.Answer;
-            Show(result.Sources, numbered: true);
+            Show(result.Sources, query, numbered: true);
             Status = null;
         }
         catch (OperationCanceledException)
@@ -272,13 +274,14 @@ public sealed partial class HistorySearchViewModel : ObservableObject
     /// Shows passages.
     /// </summary>
     /// <param name="hits">The passages.</param>
+    /// <param name="query">What the user looked for: its words are marked in the passages.</param>
     /// <param name="numbered">Whether they are the numbered sources of an answer.</param>
-    private void Show(IReadOnlyList<PassageHit> hits, bool numbered)
+    private void Show(IReadOnlyList<PassageHit> hits, string query, bool numbered)
     {
         Hits.Clear();
         for (var i = 0; i < hits.Count; i++)
         {
-            Hits.Add(new SearchHitViewModel(_localizer, hits[i], numbered ? i + 1 : null, OpenAsync));
+            Hits.Add(new SearchHitViewModel(_localizer, hits[i], numbered ? i + 1 : null, query, OpenAsync));
         }
     }
 
@@ -298,7 +301,7 @@ public sealed partial class HistorySearchViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Opens the record of a passage and plays it from the passage.
+    /// Opens the record of a passage at the passage: played from it, shown marked with the words of the query.
     /// </summary>
     /// <param name="hit">The passage.</param>
     /// <returns>A task that completes when the window of the record is closed.</returns>
@@ -307,7 +310,8 @@ public sealed partial class HistorySearchViewModel : ObservableObject
         Error = null;
         try
         {
-            if (!await _viewer.OpenAsync(hit.Hit.RecordId, CancellationToken.None, hit.Hit.Start))
+            var focus = new RecordFocus(hit.Hit.Start, hit.Hit.End, hit.Query);
+            if (!await _viewer.OpenAsync(hit.Hit.RecordId, CancellationToken.None, focus))
             {
                 Hits.Remove(hit);
                 Error = _localizer.Get("History.Missing");

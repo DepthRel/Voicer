@@ -24,17 +24,9 @@ public static class FullTextQuery
         }
 
         var terms = new List<string>();
-        var parts = text.Split('"');
-        for (var i = 0; i < parts.Length; i++)
+        foreach (var (words, isPhrase) in Parts(text))
         {
-            var words = Words(parts[i]);
-            if (words.Count == 0)
-            {
-                continue;
-            }
-
-            // Odd parts were between quotes: a phrase, word for word.
-            if (i % 2 == 1)
+            if (isPhrase)
             {
                 terms.Add("\"" + string.Join(' ', words) + "\"");
             }
@@ -45,6 +37,44 @@ public static class FullTextQuery
         }
 
         return terms.Count == 0 ? null : string.Join(" OR ", terms.Distinct(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Takes the beginnings a word of a found text starts with when it matches what the user typed: the beginnings of
+    /// the words looked up by their forms and the whole words of the phrases.
+    /// </summary>
+    /// <param name="text">What the user typed.</param>
+    /// <returns>The beginnings, in lower case, without repeats; empty when there is no word.</returns>
+    public static IReadOnlyList<string> Prefixes(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return [.. Parts(text)
+            .SelectMany(part => part.IsPhrase ? part.Words : part.Words.Select(Stem))
+            .Distinct(StringComparer.Ordinal)];
+    }
+
+    /// <summary>
+    /// Splits what the user typed into the parts between quotes (phrases) and the parts outside them.
+    /// </summary>
+    /// <param name="text">What the user typed.</param>
+    /// <returns>The words of every part that has any, and whether the part is a phrase.</returns>
+    private static IEnumerable<(List<string> Words, bool IsPhrase)> Parts(string text)
+    {
+        var parts = text.Split('"');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var words = Words(parts[i]);
+
+            // Odd parts were between quotes: a phrase, word for word.
+            if (words.Count > 0)
+            {
+                yield return (words, i % 2 == 1);
+            }
+        }
     }
 
     /// <summary>

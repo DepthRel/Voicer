@@ -45,7 +45,7 @@ public sealed class RecordSearchTests
         _index.SearchVectorAsync(default!, default!, default, default).ReturnsForAnyArgs([Hit(3), Hit(2)]);
         _client.EmbedAsync(default!, default!, default!, default).ReturnsForAnyArgs(call =>
             (IReadOnlyList<float[]>)[.. call.ArgAt<IReadOnlyList<string>>(2).Select(_ => new float[] { 3, 4 })]);
-        _search = new RecordSearch(_index, _client);
+        _search = new RecordSearch(_index);
     }
 
     /// <summary>
@@ -63,8 +63,8 @@ public sealed class RecordSearchTests
     }
 
     /// <summary>
-    /// The passages without a vector are embedded first, as passages, a batch at a time; then the query, as a query;
-    /// both lists are merged.
+    /// The passages without a vector are embedded first, as passages, a batch at a time, by the model of the server; then
+    /// the query, as a query; both lists are merged.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
@@ -75,7 +75,7 @@ public sealed class RecordSearchTests
             .Returns([new PassageText(10, "первый"), new PassageText(11, "второй")], []);
         var reports = new List<SearchProgress>();
 
-        var hits = await _search.SearchAsync("бюджет", _embeddings, 10, new SyncProgress<SearchProgress>(reports), CancellationToken.None);
+        var hits = await _search.SearchAsync("бюджет", new ServerTextEmbedder(_client, _embeddings), 10, new SyncProgress<SearchProgress>(reports), CancellationToken.None);
 
         hits.Select(h => h.PassageId).Should().Equal(2, 1, 3);
         await _client.Received(1).EmbedAsync(_endpoint, "multilingual-e5-large", Arg.Is<IReadOnlyList<string>>(t => t.SequenceEqual(new[] { "passage: первый", "passage: второй" })), Arg.Any<CancellationToken>());

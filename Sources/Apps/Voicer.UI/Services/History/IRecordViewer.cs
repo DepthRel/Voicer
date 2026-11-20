@@ -12,13 +12,16 @@ public interface IRecordViewer
     /// </summary>
     /// <param name="id">The identifier of the record.</param>
     /// <param name="cancellationToken">Stops the reading.</param>
-    /// <param name="position">The moment the player starts at, or <see langword="null"/> for the beginning.</param>
+    /// <param name="focus">
+    /// The found passage the record is opened at: the player starts there and the text shows it marked; or
+    /// <see langword="null"/> for the beginning.
+    /// </param>
     /// <returns>
     /// A task that completes when the window is closed: <see langword="true"/>, or <see langword="false"/> when the
     /// record is no longer in the history.
     /// </returns>
     /// <exception cref="IOException">The history could not be read.</exception>
-    Task<bool> OpenAsync(long id, CancellationToken cancellationToken, TimeSpan? position = null);
+    Task<bool> OpenAsync(long id, CancellationToken cancellationToken, RecordFocus? focus = null);
 
     /// <summary>
     /// Shows a recognized text that is not in the history: its saving failed.

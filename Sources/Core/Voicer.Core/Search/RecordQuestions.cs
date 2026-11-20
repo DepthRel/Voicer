@@ -49,7 +49,7 @@ public sealed class RecordQuestions : IRecordQuestions
     public async Task<QuestionAnswer> AskAsync(
         string question,
         SummarySettings chat,
-        EmbeddingSettings? embeddings,
+        ITextEmbedder? embedder,
         IProgress<SearchProgress>? indexing,
         IProgress<string>? answerSoFar,
         CancellationToken cancellationToken)
@@ -57,7 +57,7 @@ public sealed class RecordQuestions : IRecordQuestions
         ArgumentException.ThrowIfNullOrWhiteSpace(question);
         ArgumentNullException.ThrowIfNull(chat);
 
-        var hits = await _search.SearchAsync(question, embeddings, MAX_SOURCES, indexing, cancellationToken);
+        var hits = await _search.SearchAsync(question, embedder, MAX_SOURCES, indexing, cancellationToken);
         var sources = Fit(hits, Summarizer.PartLength(chat.ContextTokens));
         if (sources.Count == 0)
         {

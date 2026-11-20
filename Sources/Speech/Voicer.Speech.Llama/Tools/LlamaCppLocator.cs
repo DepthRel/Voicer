@@ -42,10 +42,41 @@ public sealed class LlamaCppLocator : ILlamaCppLocator
     /// <summary>
     /// Gets the file name of the program on this system.
     /// </summary>
-    public string ExecutableName => _isWindows ? "llama-tts.exe" : "llama-tts";
+    public string ExecutableName => ProgramName("llama-tts");
+
+    /// <summary>
+    /// Gets the file name of the server of the build on this system.
+    /// </summary>
+    public string ServerName => ProgramName("llama-server");
 
     /// <inheritdoc />
     public string? Locate()
+    {
+        return Find(ExecutableName);
+    }
+
+    /// <inheritdoc />
+    public string? LocateServer()
+    {
+        return Find(ServerName);
+    }
+
+    /// <summary>
+    /// Gets the file name of a program of the build on this system.
+    /// </summary>
+    /// <param name="name">The name of the program without an extension.</param>
+    /// <returns>The file name.</returns>
+    private string ProgramName(string name)
+    {
+        return _isWindows ? name + ".exe" : name;
+    }
+
+    /// <summary>
+    /// Finds a program in the folder of the pinned build, a level or two deep, the way its archive lays it out.
+    /// </summary>
+    /// <param name="fileName">The file name of the program.</param>
+    /// <returns>The full path of the program, or <see langword="null"/> when it is not there.</returns>
+    private string? Find(string fileName)
     {
         if (!Directory.Exists(InstallDirectory))
         {
@@ -60,6 +91,6 @@ public sealed class LlamaCppLocator : ILlamaCppLocator
             IgnoreInaccessible = true,
         };
 
-        return Directory.EnumerateFiles(InstallDirectory, ExecutableName, options).Order(StringComparer.Ordinal).FirstOrDefault();
+        return Directory.EnumerateFiles(InstallDirectory, fileName, options).Order(StringComparer.Ordinal).FirstOrDefault();
     }
 }

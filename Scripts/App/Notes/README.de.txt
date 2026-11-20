@@ -6,6 +6,7 @@ Voicer {version} ({runtime}): Sprache zu Text
 [macos] Oder Doppelklick auf Voicer.command.
 Modelle, Werkzeuge, Einstellungen und der Verlauf der erkannten Texte (voicer.db) liegen im Ordner Data neben dem Programm. Ein Whisper-Modell (von Large v3, 2,9 GB, bis Small Q5, 180 MB) wird einmal heruntergeladen, in den Einstellungen.
 Sprachausgabe: Installieren Sie einmal in den Einstellungen llama.cpp und ein Sprachmodell (Qwen3-TTS, Chatterbox, Kokoro); fügen Sie dann einen Text auf dem Tab „Sprachausgabe“ ein, hören Sie ihn an und speichern Sie ihn als WAV.
+Suche nach Bedeutung im Verlauf ohne Server: Wählen Sie in den Einstellungen unter „Suche nach Bedeutung“ ein Modell von Voicer und laden Sie es herunter (bge-m3); es läuft in llama.cpp nur während der Suche, und die Einstellungen zeigen seinen Zustand und können es beenden.
 [win] Bei einer Installation für alle Benutzer liegen sie stattdessen in %LOCALAPPDATA%\Voicer\Data jedes Benutzers.
 [win] FFmpeg, das den Ton von Audio- und Videodateien liest, wird mit einem Klick in den Einstellungen installiert.
 [linux] Installieren Sie FFmpeg mit der Paketverwaltung: sudo apt install ffmpeg (oder dnf, pacman, ...). Die Grafikkarte wird über Vulkan genutzt (libvulkan1).

@@ -6,6 +6,7 @@ Voicer {version} ({runtime}) : de la parole au texte
 [macos] Ou double-cliquez sur Voicer.command.
 Les modèles, les outils, les réglages et l'historique des textes reconnus (voicer.db) sont conservés dans le dossier Data à côté du programme. Un modèle Whisper (de Large v3, 2,9 Go, à Small Q5, 180 Mo) se télécharge une seule fois, dans les réglages.
 Synthèse vocale : installez une fois dans les réglages llama.cpp et un modèle de voix (Qwen3-TTS, Chatterbox, Kokoro) ; collez ensuite un texte dans l'onglet « Synthèse vocale », écoutez-le et enregistrez-le en WAV.
+Recherche par le sens dans l'historique sans serveur : dans les réglages, sous « Recherche par le sens », choisissez un modèle de Voicer et téléchargez-le (bge-m3) ; il tourne dans llama.cpp seulement pendant la recherche, et les réglages montrent son état et peuvent l'arrêter.
 [win] Installé pour tous les utilisateurs, Voicer les conserve à la place dans %LOCALAPPDATA%\Voicer\Data de chaque utilisateur.
 [win] FFmpeg, qui lit le son des fichiers audio et vidéo, s'installe depuis les réglages en un clic.
 [linux] Installez FFmpeg avec le gestionnaire de paquets : sudo apt install ffmpeg (ou dnf, pacman, ...). La carte graphique est utilisée via Vulkan (libvulkan1).

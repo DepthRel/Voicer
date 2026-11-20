@@ -25,25 +25,32 @@ public sealed class RecordSearchService : IRecordSearchService
     private readonly IRecordQuestions _questions;
 
     /// <summary>
-    /// The choice of the server and the models.
+    /// The choice of the server and the model of the answers.
     /// </summary>
     private readonly ISummaryPreferencesStore _preferences;
+
+    /// <summary>
+    /// Chooses the model of the search by meaning.
+    /// </summary>
+    private readonly ITextEmbedderSource _embedders;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordSearchService"/> class.
     /// </summary>
     /// <param name="search">The search of the records.</param>
     /// <param name="questions">Answers questions about the records.</param>
-    /// <param name="preferences">The choice of the server and the models.</param>
-    public RecordSearchService(IRecordSearch search, IRecordQuestions questions, ISummaryPreferencesStore preferences)
+    /// <param name="preferences">The choice of the server and the model of the answers.</param>
+    /// <param name="embedders">Chooses the model of the search by meaning.</param>
+    public RecordSearchService(IRecordSearch search, IRecordQuestions questions, ISummaryPreferencesStore preferences, ITextEmbedderSource embedders)
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _questions = questions ?? throw new ArgumentNullException(nameof(questions));
         _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+        _embedders = embedders ?? throw new ArgumentNullException(nameof(embedders));
     }
 
     /// <inheritdoc />
-    public bool SearchesByMeaning => _preferences.Load().ToEmbeddingSettings() is not null;
+    public bool SearchesByMeaning => _embedders.Current() is not null;
 
     /// <inheritdoc />
     public bool CanAsk => _preferences.Load().ToSettings() is not null;
@@ -51,16 +58,15 @@ public sealed class RecordSearchService : IRecordSearchService
     /// <inheritdoc />
     public Task<IReadOnlyList<PassageHit>> SearchAsync(string query, IProgress<SearchProgress>? indexing, CancellationToken cancellationToken)
     {
-        return _search.SearchAsync(query, _preferences.Load().ToEmbeddingSettings(), RESULTS, indexing, cancellationToken);
+        return _search.SearchAsync(query, _embedders.Current(), RESULTS, indexing, cancellationToken);
     }
 
     /// <inheritdoc />
     public Task<QuestionAnswer> AskAsync(string question, IProgress<SearchProgress>? indexing, IProgress<string>? answerSoFar, CancellationToken cancellationToken)
     {
-        var preferences = _preferences.Load();
-        var chat = preferences.ToSettings() ??
+        var chat = _preferences.Load().ToSettings() ??
             throw LocalizedError.Create(m => new InvalidOperationException(m), "Summary.NotConfigured");
 
-        return _questions.AskAsync(question, chat, preferences.ToEmbeddingSettings(), indexing, answerSoFar, cancellationToken);
+        return _questions.AskAsync(question, chat, _embedders.Current(), indexing, answerSoFar, cancellationToken);
     }
 }

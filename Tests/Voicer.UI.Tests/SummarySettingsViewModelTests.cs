@@ -1,6 +1,7 @@
 using FluentAssertions;
 using NSubstitute;
 using Voicer.Core.Summaries;
+using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
 using Voicer.UI.ViewModels.Items;
 
@@ -20,6 +21,11 @@ public sealed class SummarySettingsViewModelTests
     /// The client of the server.
     /// </summary>
     private readonly ILanguageModelClient _client = Substitute.For<ILanguageModelClient>();
+
+    /// <summary>
+    /// The choice of the source of the search by meaning; by words only unless a test says otherwise.
+    /// </summary>
+    private readonly ISearchSourceStore _search = Substitute.For<ISearchSourceStore>();
 
     /// <summary>
     /// The remembered choice is shown: the program of its address, the model, the context.
@@ -90,6 +96,69 @@ public sealed class SummarySettingsViewModelTests
         settings.Status.Should().Be(TestTexts.Russian.Format("Summary.Connected", 2));
         settings.IsStatusError.Should().BeFalse();
         await _client.Received(1).ListModelsAsync(Arg.Is<LanguageModelEndpoint>(e => e.BaseAddress.AbsoluteUri == "http://localhost:1234/v1"), Arg.Any<CancellationToken>());
+        await _client.DidNotReceiveWithAnyArgs().EmbedAsync(default!, default!, default!, default);
+    }
+
+    /// <summary>
+    /// The check asks the chosen model of embeddings for a vector, when the search by meaning uses the server, and a
+    /// model that makes it is reported as connected.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Check_TriesTheModelOfEmbeddings()
+    {
+        _search.Load().Returns(SearchSource.Server);
+        _store.Load().Returns(SummaryPreferences.Default with { EmbeddingModel = "text-embedding-nomic-embed-text-v1.5" });
+        _client.ListModelsAsync(default!, default).ReturnsForAnyArgs(["nvidia/nemotron-3-nano-4b", "text-embedding-nomic-embed-text-v1.5"]);
+        _client.EmbedAsync(default!, default!, default!, default).ReturnsForAnyArgs([[0.1f, 0.2f]]);
+        var settings = Settings();
+
+        await settings.CheckCommand.ExecuteAsync(null);
+
+        settings.Status.Should().Be(TestTexts.Russian.Format("Summary.Connected", 2));
+        settings.IsStatusError.Should().BeFalse();
+        await _client.Received(1).EmbedAsync(Arg.Any<LanguageModelEndpoint>(), "text-embedding-nomic-embed-text-v1.5", Arg.Is<IReadOnlyList<string>>(t => t.Count == 1), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// When the search by meaning does not use the server, its model of embeddings is not tried: a refusal would only
+    /// confuse.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Check_LeavesTheModelOfEmbeddingsAloneWhenTheSearchDoesNotUseIt()
+    {
+        _search.Load().Returns(SearchSource.Local);
+        _store.Load().Returns(SummaryPreferences.Default with { EmbeddingModel = "text-embedding-nomic-embed-text-v1.5" });
+        _client.ListModelsAsync(default!, default).ReturnsForAnyArgs(["qwen3-8b", "text-embedding-nomic-embed-text-v1.5"]);
+        var settings = Settings();
+
+        await settings.CheckCommand.ExecuteAsync(null);
+
+        settings.Status.Should().Be(TestTexts.Russian.Format("Summary.Connected", 2));
+        await _client.DidNotReceiveWithAnyArgs().EmbedAsync(default!, default!, default!, default);
+    }
+
+    /// <summary>
+    /// A chat model chosen for embeddings is refused by the server (LM Studio says no model is loaded); the check
+    /// names it and keeps the choice, so the search of the history does not fail with no explanation.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Check_ReportsAModelThatMakesNoEmbeddings()
+    {
+        _search.Load().Returns(SearchSource.Server);
+        _store.Load().Returns(SummaryPreferences.Default with { Model = "nvidia/nemotron-3-nano-4b", EmbeddingModel = "nvidia/nemotron-3-nano-4b" });
+        _client.ListModelsAsync(default!, default).ReturnsForAnyArgs(["nvidia/nemotron-3-nano-4b", "text-embedding-nomic-embed-text-v1.5"]);
+        _client.EmbedAsync(default!, default!, default!, default).ReturnsForAnyArgs(Task.FromException<IReadOnlyList<float[]>>(new HttpRequestException("No models loaded.")));
+        var settings = Settings();
+
+        await settings.CheckCommand.ExecuteAsync(null);
+
+        settings.Status.Should().Be(TestTexts.Russian.Format("Summary.EmbeddingRefused", 2, "nvidia/nemotron-3-nano-4b", "No models loaded."));
+        settings.IsStatusError.Should().BeTrue();
+        settings.SelectedEmbeddingModel.Should().Be("nvidia/nemotron-3-nano-4b");
+        settings.IsChecking.Should().BeFalse();
     }
 
     /// <summary>
@@ -132,6 +201,6 @@ public sealed class SummarySettingsViewModelTests
     /// <returns>The view model.</returns>
     private SummarySettingsViewModel Settings()
     {
-        return new SummarySettingsViewModel(TestTexts.Russian, _store, _client);
+        return new SummarySettingsViewModel(TestTexts.Russian, _store, _client, _search);
     }
 }

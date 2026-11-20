@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using Voicer.Core.Embeddings;
 using Voicer.Core.Enums;
 using Voicer.Core.Models;
 using Voicer.Core.Synthesis;
@@ -64,7 +65,7 @@ public sealed partial class LanguagePackTests
     }
 
     /// <summary>
-    /// Every failure of the worker, every model of both catalogs, every quantization, every language of the voice models
+    /// Every failure of the worker, every model of the three catalogs, every quantization, every language of the voice models
     /// and of Whisper, the accents and kinds of the voices and every kind of record has its text.
     /// </summary>
     [Fact]
@@ -74,6 +75,7 @@ public sealed partial class LanguagePackTests
             .Concat(SpeechModelCatalog.All.Select(m => m.DescriptionKey))
             .Concat(Enum.GetNames<ModelQuantization>().SelectMany(q => new[] { $"Quantization.{q}.Name", $"Quantization.{q}.Description" }))
             .Concat(VoiceModelCatalog.All.Select(m => m.DescriptionKey))
+            .Concat(EmbeddingModelCatalog.All.Select(m => m.DescriptionKey))
             .Concat(VoiceModelCatalog.All.SelectMany(m => m.Languages).Distinct().Select(code => "SpeechLanguage." + code))
             .Concat(SpeechLanguageNames.Codes.Select(code => SpeechLanguageNames.KEY_PREFIX + code))
             .Concat(["Voice.Accent.a", "Voice.Accent.b", "Voice.Kind.f", "Voice.Kind.m"])

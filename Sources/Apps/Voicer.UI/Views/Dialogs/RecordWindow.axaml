@@ -28,11 +28,14 @@
       <TextBlock Grid.Row="1" Classes="muted" Margin="0,0,0,12" TextWrapping="Wrap"
                  Text="{Binding AudioNote}" IsVisible="{Binding HasAudioNote}" />
 
-      <TextBox Grid.Row="2" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
-               FontSize="14" LineHeight="22"
-               ScrollViewer.VerticalScrollBarVisibility="Auto"
-               Text="{Binding Text}"
-               AutomationProperties.Name="{loc:Loc Result.Text}" />
+      <!-- The text, selectable; opened from the search, the found passage is marked and scrolled to. -->
+      <Border Grid.Row="2" Classes="card" Padding="0">
+        <ScrollViewer x:Name="TextScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <SelectableTextBlock x:Name="TextView" TextWrapping="Wrap" FontSize="14" LineHeight="22" Padding="14,10"
+                               controls:TextMarks.Source="{Binding Marked}"
+                               AutomationProperties.Name="{loc:Loc Result.Text}" />
+        </ScrollViewer>
+      </Border>
 
       <!-- The summary: the kept one, or the one the model is writing; written again on demand. -->
       <Panel Grid.Row="3" IsVisible="{Binding HasSummary}">

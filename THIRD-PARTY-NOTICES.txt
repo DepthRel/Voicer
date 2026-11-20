@@ -66,6 +66,9 @@ Chatterbox Turbo and Chatterbox             MIT            Resemble AI — githu
 Kokoro 82M v1.0 with its voices (GGUF F32   Apache-2.0     hexgrad — huggingface.co/hexgrad/Kokoro-82M; converted to
   weights, F16 projector)                                  GGUF by the ggml-org project —
                                                            huggingface.co/ggml-org/Kokoro-82M-GGUF
+bge-m3 (GGUF Q8_0), the model of the        MIT            BAAI (Beijing Academy of Artificial Intelligence) —
+  search by meaning, run by llama-server                   huggingface.co/BAAI/bge-m3; converted to GGUF by the ggml-org
+  of the build above                                       project — huggingface.co/ggml-org/bge-m3-Q8_0-GGUF
 
 On Linux and macOS Voicer uses the FFmpeg of the system.
 

@@ -25,6 +25,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     /// <param name="language">The language selector.</param>
     /// <param name="speechModels">The catalog of the speech recognition models.</param>
     /// <param name="voiceModels">The catalog of the voice models.</param>
+    /// <param name="search">The search by meaning: its source, the models of Voicer and their llama-server.</param>
     /// <param name="ffmpeg">FFmpeg.</param>
     /// <param name="llamaCpp">llama.cpp, the engine of the voice models.</param>
     /// <param name="summary">The server and the model of the summaries.</param>
@@ -35,6 +36,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         LanguageViewModel language,
         ModelCatalogViewModel speechModels,
         ModelCatalogViewModel voiceModels,
+        SearchSettingsViewModel search,
         FfmpegItemViewModel ffmpeg,
         LlamaCppItemViewModel llamaCpp,
         SummarySettingsViewModel summary,
@@ -45,6 +47,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         Language = language ?? throw new ArgumentNullException(nameof(language));
         SpeechModels = speechModels ?? throw new ArgumentNullException(nameof(speechModels));
         VoiceModels = voiceModels ?? throw new ArgumentNullException(nameof(voiceModels));
+        Search = search ?? throw new ArgumentNullException(nameof(search));
         Ffmpeg = ffmpeg ?? throw new ArgumentNullException(nameof(ffmpeg));
         LlamaCpp = llamaCpp ?? throw new ArgumentNullException(nameof(llamaCpp));
         Summary = summary ?? throw new ArgumentNullException(nameof(summary));
@@ -67,6 +70,11 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     /// Gets the catalog of the voice models.
     /// </summary>
     public ModelCatalogViewModel VoiceModels { get; }
+
+    /// <summary>
+    /// Gets the search by meaning: its source, the models of Voicer and their llama-server.
+    /// </summary>
+    public SearchSettingsViewModel Search { get; }
 
     /// <summary>
     /// Gets FFmpeg.
@@ -112,6 +120,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     {
         Ffmpeg.RefreshCommand.Execute(null);
         LlamaCpp.Refresh();
+        Search.Refresh();
     }
 
     /// <summary>

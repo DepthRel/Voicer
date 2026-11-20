@@ -2,6 +2,7 @@ using FluentAssertions;
 using NSubstitute;
 using Voicer.Core.History;
 using Voicer.Core.Playback;
+using Voicer.Core.Search;
 using Voicer.Core.Transcripts;
 using Voicer.UI.Services.Dialogs;
 using Voicer.UI.Services.History;
@@ -105,17 +106,42 @@ public sealed class RecordViewerTests : IDisposable
     }
 
     /// <summary>
-    /// A record opened at a moment of a found passage plays from that moment.
+    /// A record opened at a found passage plays from its start and shows it marked with the words of the query.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
-    public async Task Open_AtAMoment_StartsThePlayerThere()
+    public async Task Open_AtAPassage_StartsThePlayerThereAndMarksIt()
     {
+        var spoken = _transcript with
+        {
+            Segments =
+            [
+                new(TimeSpan.Zero, TimeSpan.FromSeconds(40), "Hello."),
+                new(TimeSpan.FromSeconds(42), TimeSpan.FromSeconds(50), "The budget is approved."),
+            ],
+        };
+        _history.FindAsync(3, Arg.Any<CancellationToken>()).Returns(spoken);
         _history.ExportAudioAsync(3, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(2));
 
-        await _viewer.OpenAsync(3, CancellationToken.None, TimeSpan.FromSeconds(42));
+        await _viewer.OpenAsync(3, CancellationToken.None, new RecordFocus(TimeSpan.FromSeconds(42), TimeSpan.FromSeconds(50), "budgets"));
 
         _player.Received(1).Seek(TimeSpan.FromSeconds(42));
+        var passageStart = "Hello.".Length + Environment.NewLine.Length;
+        _shown!.Marked.Passage.Should().Be(new TextMark(passageStart, "The budget is approved.".Length));
+        _shown.Marked.Words.Should().Equal(new TextMark(passageStart + 4, 6));
+    }
+
+    /// <summary>
+    /// A record opened from the list, not from the search, marks nothing.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Open_FromTheList_MarksNothing()
+    {
+        await _viewer.OpenAsync(3, CancellationToken.None);
+
+        _shown!.Marked.HasMarks.Should().BeFalse();
+        _shown.Marked.Text.Should().Be(_shown.Text);
     }
 
     /// <summary>

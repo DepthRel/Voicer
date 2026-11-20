@@ -27,6 +27,7 @@ computer, on the video card or the processor: no cloud, no account, nothing leav
 - **Text to speech.** Paste a script, pick a voice or give a sample of your own, and get a narration in WAV.
 - **History.** Every text and every narration is kept with its sound and plays back from any moment.
 - **Search and questions.** Find records by words or by meaning, ask a question and get an answer with references.
+  The found words and passages are marked; the search by meaning runs on a downloaded model, no server needed.
 - **Summaries.** A language model on your own server (LM Studio, Ollama, llama.cpp…) sums up a long recording.
 - **Six languages** of the interface: English, Deutsch, Español, Français, Português, Русский.
 
@@ -44,7 +45,7 @@ Build from source: `dotnet build Voicer.slnx`, then `dotnet run --project Source
 
 .NET 10 and [Avalonia](https://avaloniaui.net/) ·
 [whisper.cpp](https://github.com/ggml-org/whisper.cpp) through [Whisper.net](https://github.com/sandrohanea/whisper.net),
-Silero VAD · [llama.cpp](https://github.com/ggml-org/llama.cpp) with Qwen3-TTS, Chatterbox and Kokoro ·
+Silero VAD · [llama.cpp](https://github.com/ggml-org/llama.cpp) with Qwen3-TTS, Chatterbox, Kokoro and bge-m3 ·
 [FFmpeg](https://ffmpeg.org/) · SQLite · OpenAL Soft. Video cards through Vulkan (Windows, Linux) and Metal (Apple
 silicon).
 

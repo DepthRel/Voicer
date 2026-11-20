@@ -6,6 +6,7 @@ Voicer {version} ({runtime}): speech to text
 [macos] Or double-click Voicer.command.
 Models, tools, settings and the history of recognized texts (voicer.db) are kept in the Data folder next to the program. A Whisper model (from Large v3, 2.9 GB, to Small Q5, 180 MB) is downloaded once, in Settings.
 Voice generation: install llama.cpp and a voice model (Qwen3-TTS, Chatterbox, Kokoro) in Settings once; then paste a script on the Generation tab, listen to it and save it as WAV.
+Search by meaning in the History without a server: in Settings, under Search by meaning, choose a model of Voicer and download it (bge-m3); it runs in llama.cpp only while you search, and Settings show its state and can stop it.
 [win] Installed for all users, Voicer keeps them in %LOCALAPPDATA%\Voicer\Data of each user instead.
 [win] FFmpeg, which reads the sound of audio and video files, is installed from Settings with one click.
 [linux] Install FFmpeg with your package manager: sudo apt install ffmpeg (or dnf, pacman, ...). The video card is used through Vulkan (libvulkan1).

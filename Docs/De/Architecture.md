@@ -17,7 +17,7 @@ Benutzers. Die Tabs sind Transkription, Sprachausgabe, Verlauf und Einstellungen
 | `Sources/Infrastructure/Voicer.LanguageModels` | der Client für Server von Sprachmodellen mit OpenAI-kompatibler API (LM Studio, Ollama, llama.cpp, Jan): die Liste der Modelle, gestreamte Antworten |
 | `Sources/Infrastructure/Voicer.Audio` | der Player eines gespeicherten Tons: `AudioPlayer` über dem FFmpeg-Decoder und dem Tongerät (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper über Whisper.net: die Liste der Geräte, die Erkennung, der Host des Workers |
-| `Sources/Speech/Voicer.Speech.Llama` | Text zu Sprache mit llama.cpp: sein festgelegter Build und dessen Installation, die Argumente von llama-tts und der Synthesizer, der es für jedes Textstück startet |
+| `Sources/Speech/Voicer.Speech.Llama` | Text zu Sprache mit llama.cpp: sein festgelegter Build und dessen Installation, die Argumente von llama-tts und der Synthesizer, der es für jedes Textstück startet; der llama-server der Suche nach Bedeutung (`LlamaEmbeddingServer`), sein Zustand und sein Beenden |
 | `Sources/Apps/Voicer.UI` | die Avalonia-Anwendung (MVVM mit CommunityToolkit.Mvvm); dasselbe Programm ist der Worker |
 | `Sources/Apps/Voicer.Pages` | die Projektseite: statische Dateien, die GitHub Pages veröffentlicht |
 
@@ -164,8 +164,22 @@ wird, werden seine Fragmente zu Abschnitten von etwa 600 Zeichen mit ihren Momen
   neu indiziert, ohne die alten zu verlieren. Die nächsten werden per Kosinus im Speicher gefunden: Tausende Abschnitte
   brauchen Millisekunden, und keine native Erweiterung ist nötig. `EmbeddingText` fügt die Präfixe hinzu, die manche
   Familien erwarten (`query:`/`passage:` von e5, `search_query:`/`search_document:` von nomic).
+  Das Modell kann eines von Voicer sein: bge-m3 (MIT), in den Einstellungen heruntergeladen und von `llama-server` desselben
+  festgelegten Builds ausgeführt (`LlamaEmbeddingServer`): nur auf 127.0.0.1, auf einem freien Port, mit einem
+  zufälligen Schlüssel; von der ersten Suche gestartet, für jede Anfrage gehalten, nach fünf Minuten ohne Anfragen, beim
+  Beenden in den Einstellungen und mit der Anwendung beendet. Die Einstellungen zeigen seinen Zustand, den Speicher und
+  den Prozessoranteil seines Prozesses.
+  Der Abschnitt „Suche nach Bedeutung“ der Einstellungen enthält eine einzige Wahl der Quelle (`SearchSource`,
+  gespeichert als `search.source`): aus, ein Modell von Voicer oder ein Embedding-Modell des Servers; eine Wahl, die
+  noch nicht bereit ist (Modell nicht heruntergeladen, llama.cpp fehlt, kein Modell des Servers gewählt), sucht nach
+  Wörtern und sagt, warum. Vor der ersten Wahl folgt die Quelle dem Installierten. Ist der Server die Quelle, fragt
+  seine Prüfung in den Einstellungen das gewählte Modell nach einem Vektor, sodass ein versehentlich gewähltes
+  Chat-Modell dort gemeldet wird (LM Studio antwortet darauf mit einem irreführenden „No models loaded“).
 - **Fusion**: Beide Listen werden per Reciprocal Rank Fusion (k = 60) zusammengeführt, wie bei der hybriden Suche von
   Elasticsearch. Ohne Embedding-Modell sucht die Suche nur nach Wörtern.
+- **Markierungen**: Ein gefundener Abschnitt zeigt die Wörter der Anfrage fett auf Akzentgrund, erkannt an denselben
+  Anfängen, die der Index gesucht hat (`SearchMarks`), und beginnt nahe dem ersten, wenn es weit hinten steht. Aus der
+  Suche geöffnet, scrollt die Aufnahme zum Abschnitt, zeigt ihn auf Akzentgrund und spielt ab seinem Anfang.
 - **Fragen** (Retrieval-Augmented Generation, `RecordQuestions`): Die besten Abschnitte, die in den Kontext passen,
   gehen an das Modell der Zusammenfassungen, nummeriert mit ihrer Datei, ihrem Datum und ihrer Zeit; die Anweisungen
   des Sprachpakets sagen ihm, nur daraus zu antworten und sie als [1], [2] zu zitieren. Die Antwort wird gestreamt;

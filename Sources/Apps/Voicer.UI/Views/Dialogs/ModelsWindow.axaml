@@ -83,6 +83,10 @@
                               </Border>
                             </WrapPanel>
                           </DataTemplate>
+                          <!-- A model of the search by meaning has nothing of its own beyond its description. -->
+                          <DataTemplate DataType="items:EmbeddingModelItemViewModel">
+                            <Panel />
+                          </DataTemplate>
                         </ContentControl.DataTemplates>
                       </ContentControl>
 

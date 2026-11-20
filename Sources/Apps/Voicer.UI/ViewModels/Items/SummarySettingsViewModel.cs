@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Voicer.Core.Summaries;
 using Voicer.Localization;
+using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
 
 namespace Voicer.UI.ViewModels.Items;
@@ -15,6 +16,11 @@ namespace Voicer.UI.ViewModels.Items;
 public sealed partial class SummarySettingsViewModel : LocalizedViewModel
 {
     /// <summary>
+    /// The text whose vector the check asks for; the server sees it, a person never does.
+    /// </summary>
+    private const string EMBEDDING_PROBE = "probe";
+
+    /// <summary>
     /// Remembers the choice.
     /// </summary>
     private readonly ISummaryPreferencesStore _store;
@@ -23,6 +29,11 @@ public sealed partial class SummarySettingsViewModel : LocalizedViewModel
     /// Asks the server for its models.
     /// </summary>
     private readonly ILanguageModelClient _client;
+
+    /// <summary>
+    /// The choice of the source of the search by meaning: the model of embeddings is tried only when it is the server.
+    /// </summary>
+    private readonly ISearchSourceStore _search;
 
     /// <summary>
     /// The chosen program, or <see langword="null"/>; choosing one fills its address.
@@ -86,11 +97,13 @@ public sealed partial class SummarySettingsViewModel : LocalizedViewModel
     /// <param name="localizer">The localizer of the texts.</param>
     /// <param name="store">Remembers the choice.</param>
     /// <param name="client">Asks the server for its models.</param>
-    public SummarySettingsViewModel(ILocalizer localizer, ISummaryPreferencesStore store, ILanguageModelClient client)
+    /// <param name="search">The choice of the source of the search by meaning.</param>
+    public SummarySettingsViewModel(ILocalizer localizer, ISummaryPreferencesStore store, ILanguageModelClient client, ISearchSourceStore search)
         : base(localizer)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _search = search ?? throw new ArgumentNullException(nameof(search));
 
         var preferences = store.Load();
         _address = preferences.Address;
@@ -202,7 +215,8 @@ public sealed partial class SummarySettingsViewModel : LocalizedViewModel
     }
 
     /// <summary>
-    /// Connects to the server and lists its models, keeping the chosen one when the server still has it.
+    /// Connects to the server and lists its models, keeping the chosen one when the server still has it, then makes
+    /// sure the chosen model of embeddings makes embeddings when the search by meaning uses the server.
     /// </summary>
     /// <returns>A task that completes when the server answered or failed.</returns>
     [RelayCommand(CanExecute = nameof(CanCheck))]
@@ -231,6 +245,15 @@ public sealed partial class SummarySettingsViewModel : LocalizedViewModel
 
             SelectedModel = models.Contains(chosen) ? chosen : models.FirstOrDefault(m => !IsEmbeddingModel(m));
             SelectedEmbeddingModel = models.Contains(chosenEmbedding) ? chosenEmbedding : BestEmbeddingModel(models);
+
+            if (_search.Load() == SearchSource.Server && SelectedEmbeddingModel is { } embedding &&
+                await TryEmbedAsync(endpoint, embedding) is { } refusal)
+            {
+                ShowStatus(Localizer.Format("Summary.EmbeddingRefused", models.Count, embedding, refusal), true);
+
+                return;
+            }
+
             ShowStatus(Localizer.Format("Summary.Connected", models.Count), false);
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
@@ -240,6 +263,27 @@ public sealed partial class SummarySettingsViewModel : LocalizedViewModel
         finally
         {
             IsChecking = false;
+        }
+    }
+
+    /// <summary>
+    /// Asks the chosen model of embeddings for the vector of a short text, so a model that cannot make embeddings (a
+    /// chat model chosen by mistake) is reported in the settings and not by the first search of the history.
+    /// </summary>
+    /// <param name="endpoint">The server.</param>
+    /// <param name="model">The model of embeddings.</param>
+    /// <returns>The words of the refusal, or <see langword="null"/> when the model made the vector.</returns>
+    private async Task<string?> TryEmbedAsync(LanguageModelEndpoint endpoint, string model)
+    {
+        try
+        {
+            await _client.EmbedAsync(endpoint, model, [EMBEDDING_PROBE], CancellationToken.None);
+
+            return null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidDataException)
+        {
+            return Localizer.Describe(ex);
         }
     }
 

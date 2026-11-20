@@ -76,7 +76,7 @@ public sealed class RecordViewer : IRecordViewer
     }
 
     /// <inheritdoc />
-    public async Task<bool> OpenAsync(long id, CancellationToken cancellationToken, TimeSpan? position = null)
+    public async Task<bool> OpenAsync(long id, CancellationToken cancellationToken, RecordFocus? focus = null)
     {
         var transcript = await _history.FindAsync(id, cancellationToken);
         if (transcript is null)
@@ -97,9 +97,9 @@ public sealed class RecordViewer : IRecordViewer
                 if (await _history.ExportAudioAsync(id, file, cancellationToken) is { } duration)
                 {
                     var audio = _createPlayer(file, duration);
-                    if (position is { } start)
+                    if (focus is not null)
                     {
-                        audio.Seek(start);
+                        audio.Seek(focus.Start);
                     }
 
                     player = new PlayerViewModel(_localizer, audio);
@@ -111,7 +111,7 @@ public sealed class RecordViewer : IRecordViewer
                 audioNote = _localizer.Format("Player.LoadFailed", _localizer.Describe(ex));
             }
 
-            await _dialogs.ShowRecordAsync(new RecordViewModel(_localizer, transcript, _writer, _dialogs, player, audioNote, summary));
+            await _dialogs.ShowRecordAsync(new RecordViewModel(_localizer, transcript, _writer, _dialogs, player, audioNote, summary, focus));
 
             return true;
         }

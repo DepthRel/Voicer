@@ -1,5 +1,3 @@
-using Voicer.Core.Summaries;
-
 namespace Voicer.Core.Search;
 
 /// <summary>
@@ -25,23 +23,16 @@ public sealed class RecordSearch : IRecordSearch
     private readonly IPassageIndex _index;
 
     /// <summary>
-    /// The client of the server of the model of embeddings.
-    /// </summary>
-    private readonly ILanguageModelClient _client;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="RecordSearch"/> class.
     /// </summary>
     /// <param name="index">The passages and their vectors.</param>
-    /// <param name="client">The client of the server of the model of embeddings.</param>
-    public RecordSearch(IPassageIndex index, ILanguageModelClient client)
+    public RecordSearch(IPassageIndex index)
     {
         _index = index ?? throw new ArgumentNullException(nameof(index));
-        _client = client ?? throw new ArgumentNullException(nameof(client));
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<PassageHit>> SearchAsync(string query, EmbeddingSettings? embeddings, int limit, IProgress<SearchProgress>? progress, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<PassageHit>> SearchAsync(string query, ITextEmbedder? embedder, int limit, IProgress<SearchProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
         if (string.IsNullOrWhiteSpace(query))
@@ -51,14 +42,14 @@ public sealed class RecordSearch : IRecordSearch
 
         var words = FullTextQuery.Build(query);
         IReadOnlyList<PassageHit> byWords = words is null ? [] : await _index.SearchWordsAsync(words, CANDIDATES, cancellationToken);
-        if (embeddings is null)
+        if (embedder is null)
         {
             return [.. byWords.Take(limit)];
         }
 
-        await IndexAsync(embeddings, progress, cancellationToken);
-        var vector = await _client.EmbedAsync(embeddings.Endpoint, embeddings.Model, [EmbeddingText.Query(embeddings.Model, query.Trim())], cancellationToken);
-        var byMeaning = await _index.SearchVectorAsync(embeddings.Model, VectorMath.Normalize(vector[0]), CANDIDATES, cancellationToken);
+        await IndexAsync(embedder, progress, cancellationToken);
+        var vector = await embedder.EmbedAsync([EmbeddingText.Query(embedder.Model, query.Trim())], cancellationToken);
+        var byMeaning = await _index.SearchVectorAsync(embedder.Model, VectorMath.Normalize(vector[0]), CANDIDATES, cancellationToken);
 
         return RankFusion.Fuse([byWords, byMeaning], limit);
     }
@@ -66,27 +57,27 @@ public sealed class RecordSearch : IRecordSearch
     /// <summary>
     /// Gives a vector of the model to every passage that has none yet.
     /// </summary>
-    /// <param name="embeddings">The model of embeddings.</param>
+    /// <param name="embedder">The model of embeddings.</param>
     /// <param name="progress">Receives how far the indexing is.</param>
     /// <param name="cancellationToken">Stops the work; the vectors made so far are kept.</param>
     /// <returns>A task that completes when every passage has its vector.</returns>
-    private async Task IndexAsync(EmbeddingSettings embeddings, IProgress<SearchProgress>? progress, CancellationToken cancellationToken)
+    private async Task IndexAsync(ITextEmbedder embedder, IProgress<SearchProgress>? progress, CancellationToken cancellationToken)
     {
-        var total = await _index.CountWithoutVectorAsync(embeddings.Model, cancellationToken);
+        var total = await _index.CountWithoutVectorAsync(embedder.Model, cancellationToken);
         var done = 0;
         while (done < total)
         {
-            var batch = await _index.WithoutVectorAsync(embeddings.Model, BATCH, cancellationToken);
+            var batch = await _index.WithoutVectorAsync(embedder.Model, BATCH, cancellationToken);
             if (batch.Count == 0)
             {
                 break;
             }
 
             progress?.Report(new SearchProgress(done, total));
-            var texts = batch.Select(p => EmbeddingText.Passage(embeddings.Model, p.Text)).ToList();
-            var vectors = await _client.EmbedAsync(embeddings.Endpoint, embeddings.Model, texts, cancellationToken);
+            var texts = batch.Select(p => EmbeddingText.Passage(embedder.Model, p.Text)).ToList();
+            var vectors = await embedder.EmbedAsync(texts, cancellationToken);
             await _index.SaveVectorsAsync(
-                embeddings.Model,
+                embedder.Model,
                 [.. batch.Select((p, i) => new PassageVector(p.PassageId, VectorMath.Normalize(vectors[i])))],
                 cancellationToken);
             done += batch.Count;

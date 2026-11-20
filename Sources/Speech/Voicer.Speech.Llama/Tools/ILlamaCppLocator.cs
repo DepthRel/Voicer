@@ -21,4 +21,10 @@ public interface ILlamaCppLocator
     /// </summary>
     /// <returns>The full path of the program, or <see langword="null"/> when it is not installed.</returns>
     string? Locate();
+
+    /// <summary>
+    /// Finds llama-server in the folder of the pinned build: it runs the models of embeddings of the search by meaning.
+    /// </summary>
+    /// <returns>The full path of the program, or <see langword="null"/> when it is not installed.</returns>
+    string? LocateServer();
 }

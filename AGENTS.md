@@ -30,6 +30,10 @@ You are a senior software engineer. You design reliable, maintainable, secure an
   video driver must end the worker, never the window.
 - Text to speech runs only in `llama-tts` of the pinned llama.cpp build, a process of its own per piece of text,
   started without a shell: the model leaves memory with the process, and a native failure ends that process only.
+- The embeddings of the search by meaning with a model of Voicer run only in `llama-server` of the same pinned build,
+  a process of its own started without a shell, listening on 127.0.0.1 only, on a free port, with a random key. It is
+  started by a search, held by every request, and ended after a pause, by the user in the settings or with the
+  application; a native failure ends that process only, and the next search starts it again.
 - Time comes from `TimeProvider`, so tests are deterministic.
 - Critical logic is covered by unit tests; external dependencies (processes, network, native libraries, files) are
   replaced with stubs.
@@ -104,7 +108,8 @@ Sources/
                    (Voicer.Storage), the player of the kept sound (Voicer.Audio), the client of servers of
                    language models for summaries (Voicer.LanguageModels)
   Speech/          speech engines: Whisper through Whisper.net, the device list and the worker host
-                   (Voicer.Speech.Whisper); text to speech through the pinned llama.cpp (Voicer.Speech.Llama)
+                   (Voicer.Speech.Whisper); text to speech and the embeddings of the search through the pinned
+                   llama.cpp (Voicer.Speech.Llama)
 Tests/             test projects (<Project>.Tests), Shared (the localizers of the tests)
 Docs/              documentation by language: En (the main set), De, Es, Fr, Pt, Ru (the same set translated)
 Scripts/           packaging: App (the application and its installers), Assets (pictures), Shared (helpers of the

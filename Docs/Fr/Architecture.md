@@ -17,7 +17,7 @@ l'utilisateur. Les onglets sont Transcription, Synthèse vocale, Historique et R
 | `Sources/Infrastructure/Voicer.LanguageModels` | le client des serveurs de modèles de langage dotés de l'API compatible OpenAI (LM Studio, Ollama, llama.cpp, Jan) : la liste des modèles, les réponses en streaming |
 | `Sources/Infrastructure/Voicer.Audio` | le lecteur d'un son conservé : `AudioPlayer` au-dessus du décodeur FFmpeg et du périphérique audio (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper via Whisper.net : la liste des périphériques, la reconnaissance, l'hôte du processus de travail |
-| `Sources/Speech/Voicer.Speech.Llama` | la synthèse vocale avec llama.cpp : son build figé et son installation, les arguments de llama-tts et le synthétiseur qui le lance pour chaque morceau de texte |
+| `Sources/Speech/Voicer.Speech.Llama` | la synthèse vocale avec llama.cpp : son build figé et son installation, les arguments de llama-tts et le synthétiseur qui le lance pour chaque morceau de texte; le llama-server de la recherche par le sens (`LlamaEmbeddingServer`), son état et son arrêt |
 | `Sources/Apps/Voicer.UI` | l'application Avalonia (MVVM avec CommunityToolkit.Mvvm) ; le même programme est le processus de travail |
 | `Sources/Apps/Voicer.Pages` | la page du projet : des fichiers statiques publiés par GitHub Pages |
 
@@ -161,8 +161,21 @@ schéma 4 : `passages` ; les entrées conservées avant sont indexées lors de l
   perdre les anciens. Les plus proches sont trouvés par cosinus en mémoire : des milliers de passages prennent des
   millisecondes et aucune extension native n'est nécessaire. `EmbeddingText` ajoute les préfixes qu'attendent
   certaines familles (`query:`/`passage:` de e5, `search_query:`/`search_document:` de nomic).
+  Le modèle peut être celui de Voicer : bge-m3 (MIT), téléchargé dans les réglages et lancé par `llama-server` du même
+  build figé (`LlamaEmbeddingServer`) : sur 127.0.0.1 seulement, sur un port libre, avec une clé aléatoire ; lancé par
+  la première recherche, retenu par chaque requête, arrêté après cinq minutes sans requête, par l'arrêt dans les
+  réglages et avec l'application. Les réglages montrent son état, la mémoire et la part du processeur de son processus.
+  La section « Recherche par le sens » des réglages garde un seul choix de la source (`SearchSource`, gardé sous
+  `search.source`) : désactivée, un modèle de Voicer ou un modèle d'embeddings du serveur ; un choix qui n'est pas
+  encore prêt (modèle non téléchargé, llama.cpp absent, aucun modèle du serveur choisi) cherche par mots et dit
+  pourquoi. Avant le premier choix, la source suit ce qui est installé. Quand le serveur est la source, sa
+  vérification dans les réglages demande un vecteur au modèle choisi, si bien qu'un modèle de chat choisi par erreur
+  y est signalé (LM Studio y répond par un trompeur « No models loaded »).
 - **Fusion** : les deux listes sont fusionnées par Reciprocal Rank Fusion (k = 60), comme la recherche hybride
   d'Elasticsearch. Sans modèle d'embeddings, la recherche se fait par mots seulement.
+- **Marques** : un passage trouvé montre les mots de la requête en gras sur fond d'accent, reconnus par les mêmes
+  débuts que l'index a cherchés (`SearchMarks`), et commence près du premier quand il est loin. Ouvert depuis la
+  recherche, l'enregistrement défile jusqu'au passage, le montre sur fond d'accent et joue à partir de son début.
 - **Questions** (génération augmentée par récupération, `RecordQuestions`) : les meilleurs passages qui tiennent dans le
   contexte sont donnés au modèle des résumés, numérotés avec leur fichier, leur date et leur heure ; les instructions du
   pack de langue lui disent de répondre uniquement à partir d'eux et de les citer comme [1], [2]. La réponse arrive en

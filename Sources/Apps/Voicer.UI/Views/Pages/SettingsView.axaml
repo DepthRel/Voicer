@@ -76,72 +76,141 @@
                 </StackPanel>
               </Button>
             </Grid>
+          </StackPanel>
+        </Border>
+      </StackPanel>
 
-            <Border Classes="divider" />
+      <!-- The search by meaning: one choice of what makes its vectors, and what belongs to that choice. -->
+      <StackPanel Spacing="8" DataContext="{Binding Search}" x:DataType="items:SearchSettingsViewModel">
+        <TextBlock Classes="group-title" Text="{loc:Loc Search.Settings}" />
+        <Border Classes="card">
+          <StackPanel Spacing="12">
+            <Grid ColumnDefinitions="Auto,*">
+              <Border Classes="badge">
+                <controls:IconView IconKey="Icon.Search" />
+              </Border>
+              <TextBlock Grid.Column="1" Classes="muted" Margin="14,0,0,0" TextWrapping="Wrap" VerticalAlignment="Center"
+                         Text="{loc:Loc Search.SettingsHint}" />
+            </Grid>
 
-            <!-- Summaries: a header that opens the settings of the server of language models and shuts them again. -->
-            <StackPanel DataContext="{Binding Summary}" x:DataType="items:SummarySettingsViewModel">
-              <ToggleButton x:Name="SummaryToggle" Classes="disclosure" AutomationProperties.Name="{loc:Loc Summary.Settings}">
-                <Grid ColumnDefinitions="Auto,*,Auto">
-                  <Border Classes="badge">
-                    <controls:IconView IconKey="Icon.File" />
-                  </Border>
-                  <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
-                    <TextBlock Classes="section" Text="{loc:Loc Summary.Settings}" />
-                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Summary.SettingsHint}" />
-                  </StackPanel>
-                  <controls:IconView Grid.Column="2" Classes="chevron" IconKey="Icon.ChevronDown" Margin="0,0,8,0" />
+            <RadioButton GroupName="SearchSource" IsChecked="{Binding IsOff}" Content="{loc:Loc Search.Source.Off}" />
+
+            <!-- A model of Voicer: its catalog, and the llama-server that runs it while searches come. -->
+            <StackPanel Spacing="8">
+              <RadioButton GroupName="SearchSource" IsChecked="{Binding IsLocal}" Content="{loc:Loc Search.Source.Local}" />
+              <StackPanel Spacing="10" Margin="28,0,0,0" IsVisible="{Binding IsLocal}">
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Search.Source.LocalHint}" />
+                <Grid ColumnDefinitions="*,Auto" DataContext="{Binding Catalog}" x:DataType="dialogs:ModelCatalogViewModel">
+                  <TextBlock Classes="muted" Classes.success="{Binding HasInstalled}" VerticalAlignment="Center" Text="{Binding Summary}" />
+                  <Button Grid.Column="1" Classes="outline" Margin="12,0,0,0" VerticalAlignment="Center" Command="{Binding OpenCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Model" />
+                      <TextBlock Text="{loc:Loc Models.Choose}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
                 </Grid>
-              </ToggleButton>
-
-              <controls:Reveal IsExpanded="{Binding #SummaryToggle.IsChecked}">
-                <StackPanel Spacing="12" Margin="0,18,0,0">
-                  <Grid ColumnDefinitions="*,16,2*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                    <TextBlock Classes="field-label" Text="{loc:Loc Summary.Preset}" />
-                    <ComboBox Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}"
-                              PlaceholderText="{loc:Loc Summary.PresetPlaceholder}" AutomationProperties.Name="{loc:Loc Summary.Preset}">
-                      <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="summaries:LanguageModelPreset">
-                          <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                      </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <TextBlock Grid.Column="2" Classes="field-label" Text="{loc:Loc Summary.Address}" />
-                    <TextBox Grid.Row="1" Grid.Column="2" Classes="mono" Text="{Binding Address}" AutomationProperties.Name="{loc:Loc Summary.Address}" />
-
-                    <TextBlock Grid.Row="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Model}" />
-                    <ComboBox Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" Margin="0,0,16,0"
-                              ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
-                              PlaceholderText="{loc:Loc Summary.NoModels}" AutomationProperties.Name="{loc:Loc Summary.Model}" />
-
-                    <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.ApiKey}" />
-                    <TextBox Grid.Row="3" Grid.Column="2" PasswordChar="•" Text="{Binding ApiKey}" AutomationProperties.Name="{loc:Loc Summary.ApiKey}" />
-
-                    <TextBlock Grid.Row="4" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Context}" />
-                    <NumericUpDown Grid.Row="5" Minimum="{Binding MinContextTokens}" Maximum="{Binding MaxContextTokens}" Increment="1024"
-                                   FormatString="0" Value="{Binding ContextTokens}" AutomationProperties.Name="{loc:Loc Summary.Context}" />
-                    <TextBlock Grid.Row="5" Grid.Column="2" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:Loc Summary.ContextHint}" />
-
-                    <TextBlock Grid.Row="6" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.EmbeddingModel}" />
-                    <ComboBox Grid.Row="7" HorizontalAlignment="Stretch"
-                              ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedEmbeddingModel}"
-                              PlaceholderText="{loc:Loc Summary.NoEmbeddingModel}" AutomationProperties.Name="{loc:Loc Summary.EmbeddingModel}" />
-                  </Grid>
-
-                  <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Classes="success" Classes.danger="{Binding IsStatusError}" TextWrapping="Wrap" VerticalAlignment="Center"
-                               Text="{Binding Status}" IsVisible="{Binding HasStatus}" />
-                    <Button Grid.Column="1" Classes="accent" Margin="12,0,0,0" Command="{Binding CheckCommand}">
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <controls:IconView Classes="small" IconKey="Icon.Refresh" Foreground="White" />
-                        <TextBlock Text="{loc:Loc Summary.Check}" VerticalAlignment="Center" />
-                      </StackPanel>
-                    </Button>
-                  </Grid>
-                </StackPanel>
-              </controls:Reveal>
+                <Grid ColumnDefinitions="*,Auto" DataContext="{Binding LocalServer}" x:DataType="items:SearchServerViewModel">
+                  <StackPanel Spacing="3" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Ellipse Width="8" Height="8" VerticalAlignment="Center" Fill="{StaticResource SuccessBrush}" IsVisible="{Binding IsRunning}" />
+                      <TextBlock Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding StateText}" />
+                    </StackPanel>
+                    <TextBlock Classes="muted" TextWrapping="Wrap" Text="{Binding UsageText}" IsVisible="{Binding HasUsage}" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Classes="outline" VerticalAlignment="Center" Margin="12,0,0,0"
+                          Command="{Binding StopCommand}" IsVisible="{Binding IsRunning}"
+                          ToolTip.Tip="{loc:Loc SearchServer.StopHint}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Stop" />
+                      <TextBlock Text="{loc:Loc SearchServer.Stop}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </StackPanel>
             </StackPanel>
+
+            <!-- A model of the server of language models, chosen from the models the server listed. -->
+            <StackPanel Spacing="8">
+              <RadioButton GroupName="SearchSource" IsChecked="{Binding IsServer}" Content="{loc:Loc Search.Source.Server}" />
+              <StackPanel Spacing="10" Margin="28,0,0,0" IsVisible="{Binding IsServer}">
+                <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Search.Source.ServerHint}" />
+                <ComboBox HorizontalAlignment="Stretch" MaxWidth="480" HorizontalContentAlignment="Left"
+                          DataContext="{Binding ServerSettings}" x:DataType="items:SummarySettingsViewModel"
+                          ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedEmbeddingModel}"
+                          PlaceholderText="{loc:Loc Summary.NoEmbeddingModel}" AutomationProperties.Name="{loc:Loc Summary.EmbeddingModel}" />
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Why the chosen source does not work yet: until it does, the history is searched by words. -->
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasWarning}">
+              <controls:IconView Classes="small" IconKey="Icon.Alert" Foreground="{StaticResource WarningBrush}" VerticalAlignment="Top" />
+              <TextBlock TextWrapping="Wrap" Foreground="{StaticResource WarningBrush}" Text="{Binding Warning}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- The server of language models: summaries and answers to questions. -->
+      <StackPanel Spacing="8">
+        <TextBlock Classes="group-title" Text="{loc:Loc Settings.ServerGroup}" />
+        <Border Classes="card">
+          <!-- Summaries: a header that opens the settings of the server of language models and shuts them again. -->
+          <StackPanel DataContext="{Binding Summary}" x:DataType="items:SummarySettingsViewModel">
+            <ToggleButton x:Name="SummaryToggle" Classes="disclosure" AutomationProperties.Name="{loc:Loc Summary.Settings}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="badge">
+                  <controls:IconView IconKey="Icon.File" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="3" Margin="14,0" VerticalAlignment="Center">
+                  <TextBlock Classes="section" Text="{loc:Loc Summary.Settings}" />
+                  <TextBlock Classes="muted" TextWrapping="Wrap" Text="{loc:Loc Summary.SettingsHint}" />
+                </StackPanel>
+                <controls:IconView Grid.Column="2" Classes="chevron" IconKey="Icon.ChevronDown" Margin="0,0,8,0" />
+              </Grid>
+            </ToggleButton>
+
+            <controls:Reveal IsExpanded="{Binding #SummaryToggle.IsChecked}">
+              <StackPanel Spacing="12" Margin="0,18,0,0">
+                <Grid ColumnDefinitions="*,16,2*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                  <TextBlock Classes="field-label" Text="{loc:Loc Summary.Preset}" />
+                  <ComboBox Grid.Row="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Presets}" SelectedItem="{Binding SelectedPreset}"
+                            PlaceholderText="{loc:Loc Summary.PresetPlaceholder}" AutomationProperties.Name="{loc:Loc Summary.Preset}">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate x:DataType="summaries:LanguageModelPreset">
+                        <TextBlock Text="{Binding Name}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+
+                  <TextBlock Grid.Column="2" Classes="field-label" Text="{loc:Loc Summary.Address}" />
+                  <TextBox Grid.Row="1" Grid.Column="2" Classes="mono" Text="{Binding Address}" AutomationProperties.Name="{loc:Loc Summary.Address}" />
+
+                  <TextBlock Grid.Row="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Model}" />
+                  <ComboBox Grid.Row="3" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" Margin="0,0,16,0"
+                            ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}"
+                            PlaceholderText="{loc:Loc Summary.NoModels}" AutomationProperties.Name="{loc:Loc Summary.Model}" />
+
+                  <TextBlock Grid.Row="2" Grid.Column="2" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.ApiKey}" />
+                  <TextBox Grid.Row="3" Grid.Column="2" PasswordChar="•" Text="{Binding ApiKey}" AutomationProperties.Name="{loc:Loc Summary.ApiKey}" />
+
+                  <TextBlock Grid.Row="4" Classes="field-label" Margin="0,12,0,0" Text="{loc:Loc Summary.Context}" />
+                  <NumericUpDown Grid.Row="5" Minimum="{Binding MinContextTokens}" Maximum="{Binding MaxContextTokens}" Increment="1024"
+                                 FormatString="0" Value="{Binding ContextTokens}" AutomationProperties.Name="{loc:Loc Summary.Context}" />
+                  <TextBlock Grid.Row="5" Grid.Column="2" Classes="muted" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:Loc Summary.ContextHint}" />
+                </Grid>
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Classes="success" Classes.danger="{Binding IsStatusError}" TextWrapping="Wrap" VerticalAlignment="Center"
+                             Text="{Binding Status}" IsVisible="{Binding HasStatus}" />
+                  <Button Grid.Column="1" Classes="accent" Margin="12,0,0,0" Command="{Binding CheckCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <controls:IconView Classes="small" IconKey="Icon.Refresh" Foreground="White" />
+                      <TextBlock Text="{loc:Loc Summary.Check}" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                </Grid>
+              </StackPanel>
+            </controls:Reveal>
           </StackPanel>
         </Border>
       </StackPanel>

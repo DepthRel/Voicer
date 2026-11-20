@@ -13,7 +13,7 @@ public interface IRecordQuestions
     /// </summary>
     /// <param name="question">The question, in any words.</param>
     /// <param name="chat">The server and the model that write the answer.</param>
-    /// <param name="embeddings">The model of the search by meaning, or <see langword="null"/> to find passages by words.</param>
+    /// <param name="embedder">The model of the search by meaning, or <see langword="null"/> to find passages by words.</param>
     /// <param name="indexing">Receives how far the indexing of new passages is.</param>
     /// <param name="answerSoFar">Receives the answer as it arrives.</param>
     /// <param name="cancellationToken">Stops the work.</param>
@@ -24,7 +24,7 @@ public interface IRecordQuestions
     Task<QuestionAnswer> AskAsync(
         string question,
         SummarySettings chat,
-        EmbeddingSettings? embeddings,
+        ITextEmbedder? embedder,
         IProgress<SearchProgress>? indexing,
         IProgress<string>? answerSoFar,
         CancellationToken cancellationToken);

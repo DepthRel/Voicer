@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Voicer.Audio;
 using Voicer.Audio.OpenAl;
+using Voicer.Core.Embeddings;
 using Voicer.Core.Models;
 using Voicer.Core.Paths;
 using Voicer.Core.Playback;
@@ -18,6 +19,7 @@ using Voicer.LanguageModels;
 using Voicer.Localization;
 using Voicer.Media;
 using Voicer.Media.Ffmpeg;
+using Voicer.Speech.Llama.Embeddings;
 using Voicer.Speech.Llama.Engine;
 using Voicer.Speech.Llama.Tools;
 using Voicer.Storage;
@@ -51,6 +53,11 @@ public sealed class App : Application
     /// The client of the downloads; it lives as long as the application.
     /// </summary>
     private HttpClient? _http;
+
+    /// <summary>
+    /// The llama-server of the model of the search by meaning; it is ended with the application.
+    /// </summary>
+    private LlamaEmbeddingServer? _embeddingServer;
 
     /// <summary>
     /// Whether the notice of an unexpected failure is on the screen, so a failure that repeats does not stack them.
@@ -106,6 +113,7 @@ public sealed class App : Application
             desktop.Exit += (_, _) =>
             {
                 (window.DataContext as MainViewModel)?.Generation.Dispose();
+                _embeddingServer?.Dispose();
                 _http?.Dispose();
             };
         }
@@ -196,8 +204,12 @@ public sealed class App : Application
         var languageModels = new OpenAiCompatibleClient(_http);
         var summaryPreferences = new SummaryPreferencesStore(preferences);
         var summaries = new RecordSummaryService(new Summarizer(languageModels, Localizer), summaryPreferences, history);
-        var recordSearch = new RecordSearch(new SqliteSearchIndex(paths.DatabaseFile), languageModels);
-        var search = new RecordSearchService(recordSearch, new RecordQuestions(recordSearch, languageModels, Localizer), summaryPreferences);
+        var embeddingStore = new EmbeddingModelStore(paths.ModelsDirectory);
+        _embeddingServer = new LlamaEmbeddingServer(llamaCpp, embeddingStore, new ServerProcessLauncher(), TimeProvider.System);
+        var searchSource = new SearchSourceStore(preferences, embeddingStore, summaryPreferences);
+        var embedders = new TextEmbedderSource(searchSource, embeddingStore, _embeddingServer, summaryPreferences, languageModels);
+        var recordSearch = new RecordSearch(new SqliteSearchIndex(paths.DatabaseFile));
+        var search = new RecordSearchService(recordSearch, new RecordQuestions(recordSearch, languageModels, Localizer), summaryPreferences, embedders);
         var viewer = new RecordViewer(
             Localizer,
             history,
@@ -232,6 +244,7 @@ public sealed class App : Application
             new GenerationPreferencesStore(preferences),
             createPlayer,
             () => main.SelectTab(TabKey.Settings));
+        var serverSettings = new SummarySettingsViewModel(Localizer, summaryPreferences, languageModels, searchSource);
         var settings = new SettingsViewModel(
             Localizer,
             new LanguageViewModel(Localizer, language, FlagImages.Load),
@@ -250,9 +263,24 @@ public sealed class App : Application
                 [.. VoiceModelCatalog.All
                     .Select(model => new VoiceModelItemViewModel(Localizer, model, voiceStore, new VoiceModelInstaller(downloader, voiceStore), dialogs))],
                 dialogs),
+            new SearchSettingsViewModel(
+                Localizer,
+                searchSource,
+                embeddingStore,
+                summaryPreferences,
+                llamaCpp,
+                new ModelCatalogViewModel(
+                    Localizer,
+                    "Settings.SearchModels",
+                    "Models.SearchWindowHint",
+                    [.. EmbeddingModelCatalog.All
+                        .Select(model => new EmbeddingModelItemViewModel(Localizer, model, embeddingStore, new EmbeddingModelInstaller(downloader, embeddingStore), dialogs))],
+                    dialogs),
+                new SearchServerViewModel(Localizer, _embeddingServer, TimeProvider.System),
+                serverSettings),
             new FfmpegItemViewModel(Localizer, ffmpeg, new FfmpegInstaller(downloader, ffmpeg)),
             new LlamaCppItemViewModel(Localizer, llamaCpp, new LlamaCppInstaller(downloader, llamaCpp, LlamaCppPackage.ForCurrentSystem())),
-            new SummarySettingsViewModel(Localizer, summaryPreferences, languageModels),
+            serverSettings,
             paths.DataDirectory,
             dialogs);
         main.Attach(transcription, generation, new HistoryViewModel(Localizer, history, viewer, dialogs, search), settings);

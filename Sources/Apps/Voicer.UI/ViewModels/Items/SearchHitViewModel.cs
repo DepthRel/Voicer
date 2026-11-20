@@ -13,6 +13,12 @@ namespace Voicer.UI.ViewModels.Items;
 public sealed partial class SearchHitViewModel : ObservableObject
 {
     /// <summary>
+    /// How many characters before the first found word the card shows at most: a found word deep in a long passage
+    /// stays within the lines of the card.
+    /// </summary>
+    private const int EXCERPT_CONTEXT = 80;
+
+    /// <summary>
     /// The localizer of the texts.
     /// </summary>
     private readonly ILocalizer _localizer;
@@ -28,19 +34,34 @@ public sealed partial class SearchHitViewModel : ObservableObject
     /// <param name="localizer">The localizer of the texts.</param>
     /// <param name="hit">The passage.</param>
     /// <param name="number">The number of the source in an answer, or <see langword="null"/> for a plain result.</param>
+    /// <param name="query">What the user looked for: its words are marked in the passage.</param>
     /// <param name="open">Opens the record at the passage.</param>
-    public SearchHitViewModel(ILocalizer localizer, PassageHit hit, int? number, Func<SearchHitViewModel, Task> open)
+    public SearchHitViewModel(ILocalizer localizer, PassageHit hit, int? number, string query, Func<SearchHitViewModel, Task> open)
     {
         _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
         Hit = hit ?? throw new ArgumentNullException(nameof(hit));
         Number = number;
+        Query = query ?? throw new ArgumentNullException(nameof(query));
         _open = open ?? throw new ArgumentNullException(nameof(open));
+
+        Marked = SearchMarks.Excerpt(SearchMarks.Words(hit.Text, FullTextQuery.Prefixes(query)), EXCERPT_CONTEXT);
     }
 
     /// <summary>
     /// Gets the passage.
     /// </summary>
     public PassageHit Hit { get; }
+
+    /// <summary>
+    /// Gets what the user looked for.
+    /// </summary>
+    public string Query { get; }
+
+    /// <summary>
+    /// Gets the text of the passage as the card shows it: the words of the query marked, and the beginning cut off
+    /// when the first of them is far from it.
+    /// </summary>
+    public MarkedText Marked { get; }
 
     /// <summary>
     /// Gets the number of the source in an answer, or <see langword="null"/>.
@@ -70,11 +91,6 @@ public sealed partial class SearchHitViewModel : ObservableObject
         DisplayText.Moment(_localizer, Hit.CreatedAt),
         DisplayText.Duration(Hit.Start),
         DisplayText.Duration(Hit.End));
-
-    /// <summary>
-    /// Gets the text of the passage.
-    /// </summary>
-    public string Text => Hit.Text;
 
     /// <summary>
     /// Words the texts again in the language now chosen.

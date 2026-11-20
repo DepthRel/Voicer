@@ -17,7 +17,7 @@ tabs are Transcription, Generation, History and Settings.
 | `Sources/Infrastructure/Voicer.LanguageModels` | the client of servers of language models with the OpenAI-compatible API (LM Studio, Ollama, llama.cpp, Jan): the list of models, streamed answers |
 | `Sources/Infrastructure/Voicer.Audio` | the player of a kept sound: `AudioPlayer` over the FFmpeg decoder and the sound device (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper through Whisper.net: the list of devices, the recognition, the worker host |
-| `Sources/Speech/Voicer.Speech.Llama` | text to speech with llama.cpp: its pinned build and installation, the arguments of llama-tts and the synthesizer that runs it per piece of text |
+| `Sources/Speech/Voicer.Speech.Llama` | text to speech with llama.cpp: its pinned build and installation, the arguments of llama-tts and the synthesizer that runs it per piece of text; the llama-server of the search by meaning (`LlamaEmbeddingServer`), its state and its stop |
 | `Sources/Apps/Voicer.UI` | the Avalonia application (MVVM with CommunityToolkit.Mvvm); the same program is the worker |
 | `Sources/Apps/Voicer.Pages` | the project page: static files published by GitHub Pages |
 
@@ -153,8 +153,21 @@ indexed by the upgrade).
   closest are found by cosine in memory: thousands of passages take milliseconds and no native extension is needed.
   `EmbeddingText` adds the prefixes some families expect (`query:`/`passage:` of e5, `search_query:`/
   `search_document:` of nomic).
+  The model can be one of Voicer: bge-m3 (MIT), downloaded in the settings and run by `llama-server` of the same
+  pinned build (`LlamaEmbeddingServer`): on 127.0.0.1 only, on a free port, with a random key; started by the first
+  search, held by a lease for every request, ended after five minutes without requests, on a stop in the settings and
+  with the application. The settings show its state, the memory and the share of the processor of its process.
+  The section "Search by meaning" of the settings holds one choice of the source (`SearchSource`, kept as
+  `search.source`): off, a model of Voicer, or a model of embeddings of the server; a choice that is not ready (the
+  model is not downloaded, llama.cpp is missing, no model of the server is chosen) searches by words and says why.
+  Before the first choice the source follows what is installed. When the server is the source, its check in the
+  settings asks the chosen model for one vector, so a chat model chosen by mistake is reported there (LM Studio
+  answers it with a misleading "No models loaded").
 - **Fusion**: both lists are merged by Reciprocal Rank Fusion (k = 60), like the hybrid search of Elasticsearch.
   Without a model of embeddings the search goes by words only.
+- **Marks**: a found passage shows the words of the query bold on an accent ground, matched by the same beginnings the
+  index looked up (`SearchMarks`), and starts near the first of them when it is far in. Opened from the search, the
+  record scrolls to the passage, shows it on the accent ground and plays from its start.
 - **Questions** (retrieval-augmented generation, `RecordQuestions`): the best passages that fit into the context are
   given to the model of summaries, numbered with their file, date and time; the instructions of the language pack
   tell it to answer from them only and to cite them as [1], [2]. The answer streams in; its sources are shown below

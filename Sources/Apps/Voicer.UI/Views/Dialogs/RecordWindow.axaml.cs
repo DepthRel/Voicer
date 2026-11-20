@@ -1,6 +1,8 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Voicer.UI.Controls;
 using Voicer.UI.ViewModels.Dialogs;
 
 namespace Voicer.UI.Views.Dialogs;
@@ -34,6 +36,9 @@ public partial class RecordWindow : Window
     {
         base.OnOpened(e);
         _refresh.Start();
+
+        // The text is laid out only after the window opens.
+        Dispatcher.UIThread.Post(ShowPassage, DispatcherPriority.Loaded);
     }
 
     /// <inheritdoc />
@@ -51,6 +56,20 @@ public partial class RecordWindow : Window
     private void OnRefresh(object? sender, EventArgs e)
     {
         (DataContext as RecordViewModel)?.Player?.Refresh();
+    }
+
+    /// <summary>
+    /// Scrolls the text to the found passage, with a third of the view above it for what was said before.
+    /// </summary>
+    private void ShowPassage()
+    {
+        if (TextMarks.PassageBounds(TextView) is not { } passage)
+        {
+            return;
+        }
+
+        var lead = TextScroll.Viewport.Height / 3;
+        TextView.BringIntoView(new Rect(passage.X, Math.Max(0, passage.Y - lead), passage.Width, passage.Height + lead));
     }
 
     /// <summary>
