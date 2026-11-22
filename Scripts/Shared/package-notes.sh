@@ -52,9 +52,12 @@ remove_foreign_whisper_runtimes() {
   local program="$1" own="${2/osx-/macos-}" folder
   local folders=()
   [ -d "$program/runtimes" ] || return 0
-  # The folders are listed first and removed afterwards, so the search never walks into a removed one.
-  mapfile -d '' folders < <(find "$program/runtimes" -mindepth 1 -type d -print0)
-  for folder in "${folders[@]}"; do
+  # The folders are listed first and removed afterwards, so the search never walks into a removed one. macOS has bash
+  # 3.2: no mapfile, and an empty array under "set -u" is an unbound variable, hence the loop and the ${...+...} form.
+  while IFS= read -r -d '' folder; do
+    folders+=("$folder")
+  done < <(find "$program/runtimes" -mindepth 1 -type d -print0)
+  for folder in ${folders[@]+"${folders[@]}"}; do
     if [ -d "$folder" ] && [ "$(basename "$folder")" != "$own" ] && find "$folder" -maxdepth 1 -type f | grep -q .; then
       rm -rf "$folder"
     fi
