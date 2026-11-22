@@ -4,6 +4,7 @@ using Voicer.Core.Embeddings;
 using Voicer.Core.Summaries;
 using Voicer.Localization;
 using Voicer.Speech.Llama.Embeddings;
+using Voicer.Speech.Llama.Servers;
 
 namespace Voicer.Speech.Llama.Tests;
 
@@ -25,7 +26,7 @@ public sealed class LocalTextEmbedderTests
     /// <summary>
     /// The server of the model.
     /// </summary>
-    private readonly ILlamaEmbeddingServer _server = Substitute.For<ILlamaEmbeddingServer>();
+    private readonly ILlamaModelServer<EmbeddingModel> _server = Substitute.For<ILlamaModelServer<EmbeddingModel>>();
 
     /// <summary>
     /// The client of the server.
@@ -42,7 +43,7 @@ public sealed class LocalTextEmbedderTests
     /// </summary>
     public LocalTextEmbedderTests()
     {
-        _server.AcquireAsync(_model, Arg.Any<CancellationToken>()).Returns(_ => new EmbeddingServerLease(_endpoint, () => _released++));
+        _server.AcquireAsync(_model, Arg.Any<CancellationToken>()).Returns(_ => new LlamaServerLease(_endpoint, () => _released++));
     }
 
     /// <summary>

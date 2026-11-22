@@ -17,7 +17,7 @@ Benutzers. Die Tabs sind Transkription, Sprachausgabe, Verlauf und Einstellungen
 | `Sources/Infrastructure/Voicer.LanguageModels` | der Client für Server von Sprachmodellen mit OpenAI-kompatibler API (LM Studio, Ollama, llama.cpp, Jan): die Liste der Modelle, gestreamte Antworten |
 | `Sources/Infrastructure/Voicer.Audio` | der Player eines gespeicherten Tons: `AudioPlayer` über dem FFmpeg-Decoder und dem Tongerät (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper über Whisper.net: die Liste der Geräte, die Erkennung, der Host des Workers |
-| `Sources/Speech/Voicer.Speech.Llama` | Text zu Sprache mit llama.cpp: sein festgelegter Build und dessen Installation, die Argumente von llama-tts und der Synthesizer, der es für jedes Textstück startet; der llama-server der Suche nach Bedeutung (`LlamaEmbeddingServer`), sein Zustand und sein Beenden |
+| `Sources/Speech/Voicer.Speech.Llama` | Text zu Sprache mit llama.cpp: sein festgelegter Build und dessen Installation, die Argumente von llama-tts und der Synthesizer, der es für jedes Textstück startet; die llama-server der Modelle von Voicer (`LlamaModelServer`): der Suche nach Bedeutung (`LlamaEmbeddingServer`) und der Zusammenfassungen (`LlamaChatServer`), ihr Zustand und ihr Beenden |
 | `Sources/Apps/Voicer.UI` | die Avalonia-Anwendung (MVVM mit CommunityToolkit.Mvvm); dasselbe Programm ist der Worker |
 | `Sources/Apps/Voicer.Pages` | die Projektseite: statische Dateien, die GitHub Pages veröffentlicht |
 
@@ -122,6 +122,19 @@ der Start des Laufs plus das, was das Gerät abgespielt hat, mal dem Tempo. Die 
 vor; der Schieberegler wird bei der nächsten Aktualisierung des Fensters angewandt (fünfmal pro Sekunde), sodass das
 Ziehen nicht für jedes Pixel FFmpeg startet.
 
+Während der Ton läuft, ist der gerade gesprochene Satz im Text markiert und bleibt im Blick (`TranscriptLayout`; das
+Fenster folgt dem Player fünfmal pro Sekunde und scrollt nur, wenn der Satz aus dem Blick gerät). Der Text einer
+Erkennung lässt sich über das Menü des Textes korrigieren: ein Wort oder eine Auswahl, neu geschrieben oder gelöscht,
+der Ton pausiert dabei. Die erkannten Fragmente in `segments` ändern sich nie: Eine Korrektur ist eine Zeile von
+`corrections` (Schemaversion 6: der Satz, Stelle und Länge in seinem getrimmten Text, das erkannte Stück, der Ersatz,
+die Zeit), die über ihnen liegt (`TranscriptCorrections`, Core). Eine Korrektur über einer anderen vereinigt sich mit
+ihr, sodass das erkannte Stück der Text von Whisper bleibt; wird es zurückgesetzt, verschwindet die Korrektur, und eine
+Zeile, die nicht mehr zum Text passt, wird ausgelassen. Eine korrigierte Stelle ist unterstrichen und zeigt, was dort
+erkannt wurde; das Menü setzt sie zurück. Das Speichern der Korrekturen schreibt die Passagen der Aufnahme und den
+Textanfang in der Liste in derselben Transaktion neu; die Vektoren der neuen Passagen berechnet die nächste Suche. Der
+Export, eine neue Zusammenfassung und die Fragen verwenden den korrigierten Text; eine generierte Sprache ist das
+Gesprochene und wird nicht korrigiert.
+
 ## Zusammenfassungen
 
 Eine Zusammenfassung schreibt ein Sprachmodell auf einem Server, den der Benutzer betreibt: LM Studio, Ollama,
@@ -144,6 +157,19 @@ eine neue ersetzt; sie geht mit dem Eintrag. Die Seite Transkription bietet nach
 zusammenfassen“ an und öffnet das Fenster des Eintrags, wenn sie fertig ist; das Fenster zeigt die Zusammenfassung
 unter dem Text, schreibt sie (erneut) und streamt sie, während sie eintrifft. Der Export nach Markdown stellt die
 Zusammenfassung vor den Text.
+
+Die Einstellungen enthalten eine einzige Wahl dessen, was die Zusammenfassungen und die Antworten schreibt
+(`ModelSource`, gespeichert als `summary.source`): aus, ein leichtes Modell von Voicer oder ein Modell des Servers. Die
+Verbindung zum Server (Adresse, Schlüssel und Modelle) ist ein eigener Abschnitt, den die Zusammenfassungen und die
+Suche teilen. Die Modelle von Voicer sind Qwen3-4B-Instruct-2507 und Qwen3-1.7B (Apache-2.0, GGUF Q4_K_M, etwa hundert
+Sprachen); sie sind schwächer als ein vollwertiges Modell eines Servers, und die Einstellungen sagen das. Das erste
+installierte läuft in `llama-server` des festgelegten Builds (`LlamaChatServer`), wie das Modell der Suche: nur auf
+127.0.0.1, auf einem freien Port, mit einem zufälligen Schlüssel, ein Slot mit einem Kontext von 8192 Token;
+`--reasoning-budget 0` hält Qwen3-1.7B davon ab, laut nachzudenken. `ChatModelSource` öffnet eine Sitzung für eine
+Zusammenfassung oder eine Frage und hält den Server, bis sie endet. Jedes Modell von Voicer im Speicher wird auf jeder
+Seite in der Tableiste gezeigt, mit dem Speicher, den es belegt, und einer Schaltfläche, die es sofort entlädt, auch
+während es arbeitet: Diese Arbeit scheitert mit der Meldung, dass das Modell entladen wurde, und die nächste Anfrage
+startet es wieder. Ein Modell von Voicer, dessen Quelle nicht mehr gewählt ist, wird ebenfalls entladen.
 
 ## Suche und Fragen
 
@@ -169,7 +195,7 @@ wird, werden seine Fragmente zu Abschnitten von etwa 600 Zeichen mit ihren Momen
   zufälligen Schlüssel; von der ersten Suche gestartet, für jede Anfrage gehalten, nach fünf Minuten ohne Anfragen, beim
   Beenden in den Einstellungen und mit der Anwendung beendet. Die Einstellungen zeigen seinen Zustand, den Speicher und
   den Prozessoranteil seines Prozesses.
-  Der Abschnitt „Suche nach Bedeutung“ der Einstellungen enthält eine einzige Wahl der Quelle (`SearchSource`,
+  Der Abschnitt „Modelle der Verlaufssuche“ der Einstellungen enthält eine einzige Wahl der Quelle (`ModelSource`,
   gespeichert als `search.source`): aus, ein Modell von Voicer oder ein Embedding-Modell des Servers; eine Wahl, die
   noch nicht bereit ist (Modell nicht heruntergeladen, llama.cpp fehlt, kein Modell des Servers gewählt), sucht nach
   Wörtern und sagt, warum. Vor der ersten Wahl folgt die Quelle dem Installierten. Ist der Server die Quelle, fragt

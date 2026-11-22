@@ -129,6 +129,25 @@ public sealed class HistoryViewModelTests
     }
 
     /// <summary>
+    /// A record corrected in its window shows its corrected beginning in the list when the window closes; the other
+    /// records stay as they were.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Open_ThenCorrected_ShowsTheNewBeginning()
+    {
+        _viewer.OpenAsync(2, Arg.Any<CancellationToken>()).Returns(true);
+        await _page.LoadAsync();
+        var other = _page.Entries[1];
+        _history.ListAsync(default).ReturnsForAnyArgs([_meeting with { Preview = "Добрый вечер, коллеги." }, _silence]);
+
+        await _page.Entries[0].OpenCommand.ExecuteAsync(null);
+
+        _page.Entries[0].Preview.Should().Be("Добрый вечер, коллеги.");
+        _page.Entries[1].Should().BeSameAs(other);
+    }
+
+    /// <summary>
     /// A record that is no longer in the history leaves the list with a note.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>

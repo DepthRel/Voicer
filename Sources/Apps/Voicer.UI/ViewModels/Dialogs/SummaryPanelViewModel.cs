@@ -27,9 +27,9 @@ public sealed partial class SummaryPanelViewModel : ObservableObject, IDisposabl
     private readonly long _recordId;
 
     /// <summary>
-    /// The text of the record.
+    /// The text of the record; it changes when the user corrects it.
     /// </summary>
-    private readonly Transcript _transcript;
+    private Transcript _transcript;
 
     /// <summary>
     /// Writes and keeps the summary.
@@ -110,6 +110,15 @@ public sealed partial class SummaryPanelViewModel : ObservableObject, IDisposabl
     /// Gets the text of the button: to write a summary, or to write it again.
     /// </summary>
     public string SummarizeLabel => _localizer.Get(_kept is null ? "Record.Summarize" : "Record.Resummarize");
+
+    /// <summary>
+    /// Takes the corrected text of the record: the next summary is written from it. The kept summary stays.
+    /// </summary>
+    /// <param name="transcript">The text of the record.</param>
+    public void UseText(Transcript transcript)
+    {
+        _transcript = transcript ?? throw new ArgumentNullException(nameof(transcript));
+    }
 
     /// <inheritdoc />
     public void Dispose()

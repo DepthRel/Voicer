@@ -97,6 +97,7 @@ public sealed class GenerationViewModelTests
         page.SelectedModel.Should().Be(VoiceModelCatalog.Kokoro);
         page.HasLanguageChoice.Should().BeFalse();
         page.HasVoices.Should().BeTrue();
+        page.VoiceColumn.Should().Be(0, "a model without a choice of language shows its voices in the first column");
         page.SelectedVoice!.Id.Should().Be("bm_george");
         page.SelectedVoice.Title.Should().Be("George · British English, male");
         page.CanUseSample.Should().BeFalse();
@@ -105,6 +106,7 @@ public sealed class GenerationViewModelTests
 
         page.HasLanguageChoice.Should().BeTrue();
         page.SelectedLanguage!.Code.Should().Be("en");
+        page.VoiceColumn.Should().Be(2);
         page.HasVoices.Should().BeFalse();
         page.CanUseSample.Should().BeTrue();
         page.ShowSampleHint.Should().BeTrue("Qwen3-TTS speaks well only with a sample");

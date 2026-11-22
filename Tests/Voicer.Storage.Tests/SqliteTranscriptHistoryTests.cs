@@ -173,7 +173,7 @@ public sealed class SqliteTranscriptHistoryTests : IDisposable
         {
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "ALTER TABLE records DROP COLUMN kind; PRAGMA user_version = 4;";
+            command.CommandText = "DROP TABLE corrections; ALTER TABLE records DROP COLUMN kind; PRAGMA user_version = 4;";
             command.ExecuteNonQuery();
         }
 

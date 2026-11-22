@@ -145,12 +145,35 @@ public sealed partial class HistoryViewModel : PageViewModelBase
             {
                 Entries.Remove(item);
                 ErrorMessage = Localizer.Get("History.Missing");
+
+                return;
             }
+
+            await RefreshAsync(item);
         }
         catch (IOException ex)
         {
             ErrorMessage = Localizer.Format("History.OpenFailed", Localizer.Describe(ex));
         }
+    }
+
+    /// <summary>
+    /// Shows a record again after its window closed, so a corrected text shows its new beginning; the rest of the list
+    /// stays as it is.
+    /// </summary>
+    /// <param name="item">The record.</param>
+    /// <returns>A task that completes when the record is shown again.</returns>
+    /// <exception cref="IOException">The history could not be read.</exception>
+    private async Task RefreshAsync(HistoryItemViewModel item)
+    {
+        var entries = await _history.ListAsync(CancellationToken.None);
+        var index = Entries.IndexOf(item);
+        if (index < 0 || entries.FirstOrDefault(e => e.Id == item.Entry.Id) is not { } entry || entry == item.Entry)
+        {
+            return;
+        }
+
+        Entries[index] = new HistoryItemViewModel(Localizer, entry, OpenAsync, DeleteAsync);
     }
 
     /// <summary>

@@ -45,12 +45,16 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>
-    /// Reads the state of the llama-server of the search by meaning again.
+    /// Reads the state of the llama-servers of the models of Voicer, of the summaries and of the search, again.
     /// </summary>
     /// <param name="sender">The timer.</param>
     /// <param name="e">The event arguments.</param>
     private void OnRefresh(object? sender, EventArgs e)
     {
-        (DataContext as SettingsViewModel)?.Search.Refresh();
+        if (DataContext is SettingsViewModel settings)
+        {
+            settings.Summaries.Refresh();
+            settings.Search.Refresh();
+        }
     }
 }

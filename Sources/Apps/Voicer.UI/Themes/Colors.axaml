@@ -37,6 +37,8 @@
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
   <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
   <SolidColorBrush x:Key="AccentSubtleBrush" Color="{StaticResource AccentColor}" Opacity="0.14" />
+  <!-- The ground of the phrase being said: strong enough to follow at a glance while the sound plays. -->
+  <SolidColorBrush x:Key="AccentStrongBrush" Color="{StaticResource AccentColor}" Opacity="0.42" />
   <SolidColorBrush x:Key="AccentFaintBrush" Color="{StaticResource AccentColor}" Opacity="0.06" />
   <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
   <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />

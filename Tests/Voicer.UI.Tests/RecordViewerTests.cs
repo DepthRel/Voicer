@@ -1,5 +1,8 @@
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using Voicer.Core.Corrections;
+using Voicer.Core.Enums;
 using Voicer.Core.History;
 using Voicer.Core.Playback;
 using Voicer.Core.Search;
@@ -62,7 +65,7 @@ public sealed class RecordViewerTests : IDisposable
     /// </summary>
     public RecordViewerTests()
     {
-        _history.FindAsync(3, Arg.Any<CancellationToken>()).Returns(_transcript);
+        _history.FindTextAsync(3, Arg.Any<CancellationToken>()).Returns(new RecordText(_transcript, []));
         _player.Duration.Returns(TimeSpan.FromMinutes(2));
         _player.Speed.Returns(1);
         _dialogs.ShowRecordAsync(Arg.Do<RecordViewModel>(r => _shown = r)).Returns(Task.CompletedTask);
@@ -71,7 +74,7 @@ public sealed class RecordViewerTests : IDisposable
             _playedFiles.Add(file);
 
             return _player;
-        }, Substitute.For<IRecordSummaryService>());
+        }, Substitute.For<IRecordSummaryService>(), new FakeTimeProvider());
     }
 
     /// <summary>
@@ -120,7 +123,7 @@ public sealed class RecordViewerTests : IDisposable
                 new(TimeSpan.FromSeconds(42), TimeSpan.FromSeconds(50), "The budget is approved."),
             ],
         };
-        _history.FindAsync(3, Arg.Any<CancellationToken>()).Returns(spoken);
+        _history.FindTextAsync(3, Arg.Any<CancellationToken>()).Returns(new RecordText(spoken, []));
         _history.ExportAudioAsync(3, Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(TimeSpan.FromMinutes(2));
 
         await _viewer.OpenAsync(3, CancellationToken.None, new RecordFocus(TimeSpan.FromSeconds(42), TimeSpan.FromSeconds(50), "budgets"));
@@ -129,6 +132,37 @@ public sealed class RecordViewerTests : IDisposable
         var passageStart = "Hello.".Length + Environment.NewLine.Length;
         _shown!.Marked.Passage.Should().Be(new TextMark(passageStart, "The budget is approved.".Length));
         _shown.Marked.Words.Should().Equal(new TextMark(passageStart + 4, 6));
+    }
+
+    /// <summary>
+    /// A recognized record opens with its corrections applied and can be corrected.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Open_ARecognition_CanBeCorrected()
+    {
+        var spoken = _transcript with { Segments = [new(TimeSpan.Zero, TimeSpan.FromSeconds(2), "Hello wrld.")] };
+        _history.FindTextAsync(3, Arg.Any<CancellationToken>())
+            .Returns(new RecordText(spoken, [new TextCorrection(0, 6, 4, "wrld", "world", DateTimeOffset.UnixEpoch)]));
+
+        await _viewer.OpenAsync(3, CancellationToken.None);
+
+        _shown!.CanCorrect.Should().BeTrue();
+        _shown.Transcript.Text.Should().Be("Hello world.");
+    }
+
+    /// <summary>
+    /// A generated speech is what was said: its text cannot be corrected.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Open_AGeneration_CannotBeCorrected()
+    {
+        _history.FindTextAsync(3, Arg.Any<CancellationToken>()).Returns(new RecordText(_transcript with { Kind = RecordKind.Generation }, []));
+
+        await _viewer.OpenAsync(3, CancellationToken.None);
+
+        _shown!.CanCorrect.Should().BeFalse();
     }
 
     /// <summary>

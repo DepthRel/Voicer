@@ -28,12 +28,48 @@
       <TextBlock Grid.Row="1" Classes="muted" Margin="0,0,0,12" TextWrapping="Wrap"
                  Text="{Binding AudioNote}" IsVisible="{Binding HasAudioNote}" />
 
-      <!-- The text, selectable; opened from the search, the found passage is marked and scrolled to. -->
+      <!-- The text, selectable; opened from the search, the found passage is marked and scrolled to; as the sound plays,
+           the phrase being said is marked and kept in view. The menu corrects a word or a selection and takes a
+           correction back; a corrected place tells what was recognized there. -->
       <Border Grid.Row="2" Classes="card" Padding="0">
         <ScrollViewer x:Name="TextScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-          <SelectableTextBlock x:Name="TextView" TextWrapping="Wrap" FontSize="14" LineHeight="22" Padding="14,10"
-                               controls:TextMarks.Source="{Binding Marked}"
-                               AutomationProperties.Name="{loc:Loc Result.Text}" />
+          <Panel>
+            <SelectableTextBlock x:Name="TextView" TextWrapping="Wrap" FontSize="14" LineHeight="22" Padding="14,10"
+                                 controls:TextMarks.Source="{Binding Marked}"
+                                 ContextRequested="OnTextContextRequested"
+                                 PointerMoved="OnTextPointerMoved"
+                                 AutomationProperties.Name="{loc:Loc Result.Text}">
+              <SelectableTextBlock.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{loc:Loc Record.Copy}" Click="OnCopyClick" />
+                  <MenuItem Header="{loc:Loc Record.Correct}" Command="{Binding BeginCorrectionCommand}"
+                            IsVisible="{Binding CanCorrect}" />
+                  <MenuItem Header="{loc:Loc Record.Revert}" Command="{Binding RevertCommand}"
+                            IsVisible="{Binding CanRevertHere}" />
+                </ContextMenu>
+              </SelectableTextBlock.ContextMenu>
+            </SelectableTextBlock>
+
+            <!-- The place of the piece being corrected: the field of the correction opens at it. -->
+            <Canvas IsHitTestVisible="False">
+              <Border x:Name="EditAnchor">
+                <FlyoutBase.AttachedFlyout>
+                  <Flyout Placement="BottomEdgeAlignedLeft" Closed="OnEditClosed">
+                    <StackPanel x:DataType="vm:RecordViewModel" Spacing="8" Width="340">
+                      <TextBlock Classes="section" Text="{loc:Loc Record.CorrectTitle}" />
+                      <TextBox Text="{Binding EditText}" KeyDown="OnEditKeyDown" AttachedToVisualTree="OnEditBoxAttached"
+                               AutomationProperties.Name="{loc:Loc Record.CorrectTitle}" />
+                      <TextBlock Classes="danger" TextWrapping="Wrap" Text="{Binding EditHint}" IsVisible="{Binding HasEditHint}" />
+                      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Classes="outline" Content="{loc:Loc Common.Cancel}" Command="{Binding CancelCorrectionCommand}" />
+                        <Button Classes="accent" Content="{loc:Loc Record.CorrectSave}" Command="{Binding SaveCorrectionCommand}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </Flyout>
+                </FlyoutBase.AttachedFlyout>
+              </Border>
+            </Canvas>
+          </Panel>
         </ScrollViewer>
       </Border>
 

@@ -2,7 +2,6 @@ using Voicer.Core.History;
 using Voicer.Core.Summaries;
 using Voicer.Core.Transcripts;
 using Voicer.Localization;
-using Voicer.UI.Services.Configuration;
 
 namespace Voicer.UI.Services.Summaries;
 
@@ -17,9 +16,9 @@ public sealed class RecordSummaryService : IRecordSummaryService
     private readonly ISummarizer _summarizer;
 
     /// <summary>
-    /// The choice of the server and the model.
+    /// The chosen model of the summaries: of the server, or of Voicer.
     /// </summary>
-    private readonly ISummaryPreferencesStore _preferences;
+    private readonly IChatModelSource _chat;
 
     /// <summary>
     /// The history the summaries are kept in.
@@ -35,30 +34,28 @@ public sealed class RecordSummaryService : IRecordSummaryService
     /// Initializes a new instance of the <see cref="RecordSummaryService"/> class.
     /// </summary>
     /// <param name="summarizer">Writes the summaries.</param>
-    /// <param name="preferences">The choice of the server and the model.</param>
+    /// <param name="chat">The chosen model of the summaries: of the server, or of Voicer.</param>
     /// <param name="history">The history the summaries are kept in.</param>
     /// <param name="time">The clock that dates the summaries; the system clock by default.</param>
-    public RecordSummaryService(ISummarizer summarizer, ISummaryPreferencesStore preferences, ITranscriptHistory history, TimeProvider? time = null)
+    public RecordSummaryService(ISummarizer summarizer, IChatModelSource chat, ITranscriptHistory history, TimeProvider? time = null)
     {
         _summarizer = summarizer ?? throw new ArgumentNullException(nameof(summarizer));
-        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+        _chat = chat ?? throw new ArgumentNullException(nameof(chat));
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _time = time ?? TimeProvider.System;
     }
 
     /// <inheritdoc />
-    public bool IsConfigured => _preferences.Load().ToSettings() is not null;
+    public bool IsConfigured => _chat.IsAvailable;
 
     /// <inheritdoc />
     public async Task<RecordSummary> SummarizeAsync(long id, Transcript transcript, IProgress<SummaryProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(transcript);
 
-        var settings = _preferences.Load().ToSettings() ??
-            throw LocalizedError.Create(m => new InvalidOperationException(m), "Summary.NotConfigured");
-
-        var text = await _summarizer.SummarizeAsync(transcript, settings, progress, cancellationToken);
-        var summary = new RecordSummary(text, settings.Model, _time.GetLocalNow());
+        using var session = await _chat.OpenAsync(cancellationToken);
+        var text = await session.RunAsync(settings => _summarizer.SummarizeAsync(transcript, settings, progress, cancellationToken));
+        var summary = new RecordSummary(text, session.Settings.Model, _time.GetLocalNow());
 
         if (!await _history.SaveSummaryAsync(id, summary, CancellationToken.None))
         {

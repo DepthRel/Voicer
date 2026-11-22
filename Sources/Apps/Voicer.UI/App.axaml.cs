@@ -19,8 +19,10 @@ using Voicer.LanguageModels;
 using Voicer.Localization;
 using Voicer.Media;
 using Voicer.Media.Ffmpeg;
+using Voicer.Speech.Llama.Chat;
 using Voicer.Speech.Llama.Embeddings;
 using Voicer.Speech.Llama.Engine;
+using Voicer.Speech.Llama.Servers;
 using Voicer.Speech.Llama.Tools;
 using Voicer.Storage;
 using Voicer.UI.Enums;
@@ -58,6 +60,11 @@ public sealed class App : Application
     /// The llama-server of the model of the search by meaning; it is ended with the application.
     /// </summary>
     private LlamaEmbeddingServer? _embeddingServer;
+
+    /// <summary>
+    /// The llama-server of the model of the summaries, ended with the application.
+    /// </summary>
+    private LlamaChatServer? _chatServer;
 
     /// <summary>
     /// Whether the notice of an unexpected failure is on the screen, so a failure that repeats does not stack them.
@@ -114,6 +121,7 @@ public sealed class App : Application
             {
                 (window.DataContext as MainViewModel)?.Generation.Dispose();
                 _embeddingServer?.Dispose();
+                _chatServer?.Dispose();
                 _http?.Dispose();
             };
         }
@@ -203,20 +211,25 @@ public sealed class App : Application
         generationRunner.ClearLeftovers();
         var languageModels = new OpenAiCompatibleClient(_http);
         var summaryPreferences = new SummaryPreferencesStore(preferences);
-        var summaries = new RecordSummaryService(new Summarizer(languageModels, Localizer), summaryPreferences, history);
+        var chatStore = new ChatModelStore(paths.ModelsDirectory);
+        _chatServer = new LlamaChatServer(llamaCpp, chatStore, new ServerProcessLauncher(), TimeProvider.System);
+        var summarySource = new SummarySourceStore(preferences, chatStore, summaryPreferences);
+        var chat = new ChatModelSource(summarySource, chatStore, llamaCpp, _chatServer, summaryPreferences);
+        var summaries = new RecordSummaryService(new Summarizer(languageModels, Localizer), chat, history);
         var embeddingStore = new EmbeddingModelStore(paths.ModelsDirectory);
         _embeddingServer = new LlamaEmbeddingServer(llamaCpp, embeddingStore, new ServerProcessLauncher(), TimeProvider.System);
         var searchSource = new SearchSourceStore(preferences, embeddingStore, summaryPreferences);
         var embedders = new TextEmbedderSource(searchSource, embeddingStore, _embeddingServer, summaryPreferences, languageModels);
         var recordSearch = new RecordSearch(new SqliteSearchIndex(paths.DatabaseFile));
-        var search = new RecordSearchService(recordSearch, new RecordQuestions(recordSearch, languageModels, Localizer), summaryPreferences, embedders);
+        var search = new RecordSearchService(recordSearch, new RecordQuestions(recordSearch, languageModels, Localizer), chat, embedders);
         var viewer = new RecordViewer(
             Localizer,
             history,
             dialogs,
             temporaryAudio,
             createPlayer,
-            summaries);
+            summaries,
+            TimeProvider.System);
 
         var main = new MainViewModel();
         var transcription = new TranscriptionViewModel(
@@ -244,7 +257,7 @@ public sealed class App : Application
             new GenerationPreferencesStore(preferences),
             createPlayer,
             () => main.SelectTab(TabKey.Settings));
-        var serverSettings = new SummarySettingsViewModel(Localizer, summaryPreferences, languageModels, searchSource);
+        var serverSettings = new LanguageServerSettingsViewModel(Localizer, summaryPreferences, languageModels, searchSource);
         var settings = new SettingsViewModel(
             Localizer,
             new LanguageViewModel(Localizer, language, FlagImages.Load),
@@ -263,6 +276,22 @@ public sealed class App : Application
                 [.. VoiceModelCatalog.All
                     .Select(model => new VoiceModelItemViewModel(Localizer, model, voiceStore, new VoiceModelInstaller(downloader, voiceStore), dialogs))],
                 dialogs),
+            serverSettings,
+            new SummaryModelSettingsViewModel(
+                Localizer,
+                summarySource,
+                chatStore,
+                summaryPreferences,
+                llamaCpp,
+                new ModelCatalogViewModel(
+                    Localizer,
+                    "Settings.SummaryModels",
+                    "Models.SummaryWindowHint",
+                    [.. ChatModelCatalog.All
+                        .Select(model => new ServerModelItemViewModel<ChatModel>(Localizer, model, chatStore, new ServerModelInstaller<ChatModel>(downloader, chatStore), dialogs))],
+                    dialogs),
+                new LlamaServerViewModel(Localizer, _chatServer, TimeProvider.System),
+                serverSettings),
             new SearchSettingsViewModel(
                 Localizer,
                 searchSource,
@@ -274,13 +303,12 @@ public sealed class App : Application
                     "Settings.SearchModels",
                     "Models.SearchWindowHint",
                     [.. EmbeddingModelCatalog.All
-                        .Select(model => new EmbeddingModelItemViewModel(Localizer, model, embeddingStore, new EmbeddingModelInstaller(downloader, embeddingStore), dialogs))],
+                        .Select(model => new ServerModelItemViewModel<EmbeddingModel>(Localizer, model, embeddingStore, new ServerModelInstaller<EmbeddingModel>(downloader, embeddingStore), dialogs))],
                     dialogs),
-                new SearchServerViewModel(Localizer, _embeddingServer, TimeProvider.System),
+                new LlamaServerViewModel(Localizer, _embeddingServer, TimeProvider.System),
                 serverSettings),
             new FfmpegItemViewModel(Localizer, ffmpeg, new FfmpegInstaller(downloader, ffmpeg)),
             new LlamaCppItemViewModel(Localizer, llamaCpp, new LlamaCppInstaller(downloader, llamaCpp, LlamaCppPackage.ForCurrentSystem())),
-            serverSettings,
             paths.DataDirectory,
             dialogs);
         main.Attach(transcription, generation, new HistoryViewModel(Localizer, history, viewer, dialogs, search), settings);

@@ -2,6 +2,7 @@ using Voicer.Core.Embeddings;
 using Voicer.Core.Search;
 using Voicer.Core.Summaries;
 using Voicer.Speech.Llama.Embeddings;
+using Voicer.Speech.Llama.Servers;
 using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
 
@@ -27,7 +28,7 @@ public sealed class TextEmbedderSource : ITextEmbedderSource
     /// <summary>
     /// Runs a model of Voicer.
     /// </summary>
-    private readonly ILlamaEmbeddingServer _server;
+    private readonly ILlamaModelServer<EmbeddingModel> _server;
 
     /// <summary>
     /// The settings of the server of language models.
@@ -50,7 +51,7 @@ public sealed class TextEmbedderSource : ITextEmbedderSource
     public TextEmbedderSource(
         ISearchSourceStore source,
         IEmbeddingModelStore models,
-        ILlamaEmbeddingServer server,
+        ILlamaModelServer<EmbeddingModel> server,
         ISummaryPreferencesStore preferences,
         ILanguageModelClient client)
     {
@@ -66,8 +67,8 @@ public sealed class TextEmbedderSource : ITextEmbedderSource
     {
         return _source.Load() switch
         {
-            SearchSource.Local when _models.Preferred() is { } model => new LocalTextEmbedder(_server, _client, model),
-            SearchSource.Server when _preferences.Load().ToEmbeddingSettings() is { } settings => new ServerTextEmbedder(_client, settings),
+            ModelSource.Local when _models.Preferred() is { } model => new LocalTextEmbedder(_server, _client, model),
+            ModelSource.Server when _preferences.Load().ToEmbeddingSettings() is { } settings => new ServerTextEmbedder(_client, settings),
             _ => null,
         };
     }

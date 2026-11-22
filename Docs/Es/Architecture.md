@@ -17,7 +17,7 @@ pestañas son Transcripción, Generación, Historial y Ajustes.
 | `Sources/Infrastructure/Voicer.LanguageModels` | el cliente de servidores de modelos de lenguaje con la API compatible con OpenAI (LM Studio, Ollama, llama.cpp, Jan): la lista de modelos, las respuestas en streaming |
 | `Sources/Infrastructure/Voicer.Audio` | el reproductor de un sonido guardado: `AudioPlayer` sobre el decodificador de FFmpeg y el dispositivo de sonido (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper a través de Whisper.net: la lista de dispositivos, el reconocimiento, el host del proceso de trabajo |
-| `Sources/Speech/Voicer.Speech.Llama` | texto a voz con llama.cpp: su compilación fijada y su instalación, los argumentos de llama-tts y el sintetizador que lo ejecuta para cada fragmento de texto; el llama-server de la búsqueda por significado (`LlamaEmbeddingServer`), su estado y su detención |
+| `Sources/Speech/Voicer.Speech.Llama` | texto a voz con llama.cpp: su compilación fijada y su instalación, los argumentos de llama-tts y el sintetizador que lo ejecuta para cada fragmento de texto; los llama-server de los modelos de Voicer (`LlamaModelServer`): de la búsqueda por significado (`LlamaEmbeddingServer`) y de los resúmenes (`LlamaChatServer`), su estado y su detención |
 | `Sources/Apps/Voicer.UI` | la aplicación Avalonia (MVVM con CommunityToolkit.Mvvm); el mismo programa es el proceso de trabajo |
 | `Sources/Apps/Voicer.Pages` | la página del proyecto: archivos estáticos que publica GitHub Pages |
 
@@ -119,6 +119,19 @@ más lo que el dispositivo ha reproducido por la velocidad. Los botones saltan d
 deslizador se aplica en el siguiente refresco de la ventana (cinco veces por segundo), así que arrastrarlo no inicia
 FFmpeg por cada píxel.
 
+Mientras suena el audio, la frase que se está diciendo queda marcada en el texto y a la vista (`TranscriptLayout`; la
+ventana sigue al reproductor cinco veces por segundo y solo desplaza el texto cuando la frase sale de la vista). El
+texto de un reconocimiento se puede corregir desde el menú del texto: una palabra o una selección, escrita de nuevo o
+eliminada, con el audio en pausa mientras tanto. Los fragmentos reconocidos en `segments` nunca cambian: una corrección
+es una fila de `corrections` (versión 6 del esquema: la frase, la posición y la longitud en su texto recortado, el
+trozo reconocido, el reemplazo, la hora) que se superpone a ellos (`TranscriptCorrections`, Core). Una corrección sobre
+otra se une a ella, de modo que el trozo reconocido sigue siendo el texto de Whisper; volver a ponerlo quita la
+corrección, y una fila que ya no encaja con el texto se omite. Un lugar corregido aparece subrayado e indica qué se
+reconoció allí; el menú lo restaura. Guardar las correcciones vuelve a escribir los pasajes del registro y el comienzo
+de su texto en la lista en la misma transacción; los vectores de los pasajes nuevos los calcula la siguiente búsqueda.
+La exportación, un resumen nuevo y las preguntas usan el texto corregido; un habla generada es lo que se dijo y no se
+corrige.
+
 ## Resúmenes
 
 Un resumen lo escribe un modelo de lenguaje en un servidor que mantiene el usuario: LM Studio, Ollama, llama.cpp
@@ -138,6 +151,19 @@ El resumen se guarda con su registro (`summaries`, versión de esquema 3: texto,
 nuevo; se va con el registro. La página Transcripción ofrece «Resumir el texto» tras un reconocimiento y abre la
 ventana del registro cuando termina; la ventana muestra el resumen bajo el texto, lo escribe (de nuevo) y lo muestra a
 medida que llega. La exportación a Markdown pone el resumen antes del texto.
+
+Los ajustes guardan una sola elección de lo que escribe los resúmenes y las respuestas (`ModelSource`, guardada como
+`summary.source`): desactivado, un modelo ligero de Voicer o un modelo del servidor. La conexión con el servidor (su
+dirección, su clave y sus modelos) es una sección propia que comparten los resúmenes y la búsqueda. Los modelos de
+Voicer son Qwen3-4B-Instruct-2507 y Qwen3-1.7B (Apache-2.0, GGUF Q4_K_M, unos cien idiomas); son más débiles que un
+modelo completo de un servidor, y los ajustes lo dicen. El primero instalado se ejecuta en `llama-server` de la
+compilación fijada (`LlamaChatServer`), como el modelo de la búsqueda: solo en 127.0.0.1, en un puerto libre, con una
+clave aleatoria, una ranura con un contexto de 8192 tokens; `--reasoning-budget 0` evita que Qwen3-1.7B razone en voz
+alta. `ChatModelSource` abre una sesión para un resumen o una pregunta y mantiene el servidor hasta que termina. Cada
+modelo de Voicer en memoria se muestra en la barra de pestañas de todas las páginas, con la memoria que ocupa y un
+botón que lo quita de la memoria al instante, incluso mientras trabaja: ese trabajo falla con un mensaje de que el
+modelo salió de la memoria, y la siguiente petición lo inicia de nuevo. Un modelo de Voicer cuya fuente ya no está
+elegida también sale de la memoria.
 
 ## Búsqueda y preguntas
 
@@ -162,7 +188,7 @@ registros guardados antes se indexan en la actualización).
   compilación fijada (`LlamaEmbeddingServer`): solo en 127.0.0.1, en un puerto libre, con una clave aleatoria; lo
   inicia la primera búsqueda, cada petición lo retiene, y se detiene tras cinco minutos sin peticiones, al detenerlo en
   los ajustes y con la aplicación. Los ajustes muestran su estado, la memoria y la parte del procesador de su proceso.
-  La sección «Búsqueda por significado» de los ajustes guarda una sola elección de la fuente (`SearchSource`,
+  La sección «Modelos de la búsqueda en el historial» de los ajustes guarda una sola elección de la fuente (`ModelSource`,
   guardada como `search.source`): desactivada, un modelo de Voicer o un modelo de embeddings del servidor; una
   elección que aún no está lista (modelo sin descargar, falta llama.cpp, ningún modelo del servidor elegido) busca por
   palabras y dice por qué. Antes de la primera elección la fuente sigue lo instalado. Cuando la fuente es el servidor,

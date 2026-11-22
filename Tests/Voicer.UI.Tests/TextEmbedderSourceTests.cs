@@ -4,6 +4,7 @@ using Voicer.Core.Embeddings;
 using Voicer.Core.Search;
 using Voicer.Core.Summaries;
 using Voicer.Speech.Llama.Embeddings;
+using Voicer.Speech.Llama.Servers;
 using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
 using Voicer.UI.Services.Search;
@@ -48,7 +49,7 @@ public sealed class TextEmbedderSourceTests
     {
         _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
         _preferences.Load().Returns(_withServerModel);
-        _source = new TextEmbedderSource(_choice, _models, Substitute.For<ILlamaEmbeddingServer>(), _preferences, Substitute.For<ILanguageModelClient>());
+        _source = new TextEmbedderSource(_choice, _models, Substitute.For<ILlamaModelServer<EmbeddingModel>>(), _preferences, Substitute.For<ILanguageModelClient>());
     }
 
     /// <summary>
@@ -57,7 +58,7 @@ public sealed class TextEmbedderSourceTests
     [Fact]
     public void LocalChoice_UsesTheModelOfVoicer()
     {
-        _choice.Load().Returns(SearchSource.Local);
+        _choice.Load().Returns(ModelSource.Local);
 
         var embedder = _source.Current();
 
@@ -71,7 +72,7 @@ public sealed class TextEmbedderSourceTests
     [Fact]
     public void ServerChoice_UsesTheModelOfTheServer()
     {
-        _choice.Load().Returns(SearchSource.Server);
+        _choice.Load().Returns(ModelSource.Server);
 
         var embedder = _source.Current();
 
@@ -85,7 +86,7 @@ public sealed class TextEmbedderSourceTests
     [Fact]
     public void Off_SearchesByWords()
     {
-        _choice.Load().Returns(SearchSource.Off);
+        _choice.Load().Returns(ModelSource.Off);
 
         _source.Current().Should().BeNull();
     }
@@ -96,12 +97,12 @@ public sealed class TextEmbedderSourceTests
     [Fact]
     public void ChoiceNotReady_SearchesByWords()
     {
-        _choice.Load().Returns(SearchSource.Local);
+        _choice.Load().Returns(ModelSource.Local);
         _models.Preferred().Returns((EmbeddingModel?)null);
 
         _source.Current().Should().BeNull();
 
-        _choice.Load().Returns(SearchSource.Server);
+        _choice.Load().Returns(ModelSource.Server);
         _preferences.Load().Returns(SummaryPreferences.Default);
 
         _source.Current().Should().BeNull();

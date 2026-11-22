@@ -17,7 +17,7 @@ internal sealed class HistoryDatabase
     /// <summary>
     /// The version of the schema this build writes; it is kept in <c>PRAGMA user_version</c>.
     /// </summary>
-    internal const int SCHEMA_VERSION = 5;
+    internal const int SCHEMA_VERSION = 6;
 
     /// <summary>
     /// The schema of version 1: the records of the history and the fragments of their texts.
@@ -106,6 +106,24 @@ internal sealed class HistoryDatabase
     private const string SCHEMA_V5 = """
         ALTER TABLE records ADD COLUMN kind INTEGER NOT NULL DEFAULT 0;
         PRAGMA user_version = 5;
+        """;
+
+    /// <summary>
+    /// The schema of version 6: the corrections the user made over the recognized text, which stays as it was.
+    /// </summary>
+    private const string SCHEMA_V6 = """
+        CREATE TABLE corrections (
+            record_id INTEGER NOT NULL REFERENCES records (id) ON DELETE CASCADE,
+            segment INTEGER NOT NULL,
+            start INTEGER NOT NULL,
+            length INTEGER NOT NULL,
+            original TEXT NOT NULL,
+            replacement TEXT NOT NULL,
+            created_at_ms INTEGER NOT NULL,
+            utc_offset_min INTEGER NOT NULL,
+            PRIMARY KEY (record_id, segment, start)
+        ) WITHOUT ROWID;
+        PRAGMA user_version = 6;
         """;
 
     /// <summary>
@@ -283,6 +301,11 @@ internal sealed class HistoryDatabase
             if (version < 5)
             {
                 Upgrade(connection, SCHEMA_V5);
+            }
+
+            if (version < 6)
+            {
+                Upgrade(connection, SCHEMA_V6);
             }
 
             _schemaReady = true;

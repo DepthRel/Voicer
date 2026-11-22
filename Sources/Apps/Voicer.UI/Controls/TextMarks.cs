@@ -8,7 +8,8 @@ namespace Voicer.UI.Controls;
 
 /// <summary>
 /// Shows a <see cref="MarkedText"/> in a <see cref="TextBlock"/> (or a <see cref="SelectableTextBlock"/>): the found
-/// words bold in the accent colour on a soft accent ground, the found passage on the same ground. Set
+/// words bold in the accent colour on a soft accent ground, the found passage on the same ground, the phrase being said
+/// on a stronger one in the primary text colour, the corrected places underlined in the colour of success. Set
 /// <c>controls:TextMarks.Source</c> instead of the text of the block.
 /// </summary>
 public static class TextMarks
@@ -19,9 +20,24 @@ public static class TextMarks
     private const string GROUND_BRUSH = "AccentSubtleBrush";
 
     /// <summary>
+    /// The key of the brush of the ground of the phrase being said, stronger than the other marks.
+    /// </summary>
+    private const string PHRASE_BRUSH = "AccentStrongBrush";
+
+    /// <summary>
+    /// The key of the brush of the text of the phrase being said.
+    /// </summary>
+    private const string PHRASE_TEXT_BRUSH = "TextPrimaryBrush";
+
+    /// <summary>
     /// The key of the brush of the found words.
     /// </summary>
     private const string WORD_BRUSH = "AccentHoverBrush";
+
+    /// <summary>
+    /// The key of the brush of the corrected places.
+    /// </summary>
+    private const string CORRECTION_BRUSH = "SuccessBrush";
 
     /// <summary>
     /// Defines the <c>Source</c> attached property: the text with its marks.
@@ -70,12 +86,20 @@ public static class TextMarks
     {
         ArgumentNullException.ThrowIfNull(block);
 
-        if (GetSource(block)?.Passage is not { } passage)
-        {
-            return null;
-        }
+        return GetSource(block)?.Passage is { } passage ? RangeBounds(block, passage) : null;
+    }
 
-        var rectangles = block.TextLayout.HitTestTextRange(passage.Start, passage.Length).ToList();
+    /// <summary>
+    /// Finds where a piece of the text of a block lies in it, once the block has laid its text out.
+    /// </summary>
+    /// <param name="block">The block.</param>
+    /// <param name="range">The piece of the text.</param>
+    /// <returns>The area of the piece in the block, or <see langword="null"/> when it is not laid out.</returns>
+    public static Rect? RangeBounds(TextBlock block, TextMark range)
+    {
+        ArgumentNullException.ThrowIfNull(block);
+
+        var rectangles = block.TextLayout.HitTestTextRange(range.Start, range.Length).ToList();
         if (rectangles.Count == 0)
         {
             return null;
@@ -84,6 +108,26 @@ public static class TextMarks
         var area = rectangles.Aggregate((a, b) => a.Union(b));
 
         return area.Translate(new Vector(block.Padding.Left, block.Padding.Top));
+    }
+
+    /// <summary>
+    /// Finds the character of the text of a block under a point.
+    /// </summary>
+    /// <param name="block">The block.</param>
+    /// <param name="point">The point, in the coordinates of the block.</param>
+    /// <returns>The index of the character, or <see langword="null"/> when the point is not on the text.</returns>
+    public static int? IndexAt(TextBlock block, Point point)
+    {
+        ArgumentNullException.ThrowIfNull(block);
+
+        var at = new Point(point.X - block.Padding.Left, point.Y - block.Padding.Top);
+        var index = block.TextLayout.HitTestPoint(at).CharacterHit.FirstCharacterIndex;
+
+        // The hit says it is outside the text on every line after the first one, so the area of the character found
+        // decides instead.
+        var onCharacter = block.TextLayout.HitTestTextRange(index, 1).Any(area => area.Contains(at));
+
+        return onCharacter ? index : null;
     }
 
     /// <summary>
@@ -102,7 +146,11 @@ public static class TextMarks
         }
 
         var ground = Brush(GROUND_BRUSH);
+        var phraseGround = Brush(PHRASE_BRUSH);
+        var phraseText = Brush(PHRASE_TEXT_BRUSH);
         var accent = Brush(WORD_BRUSH);
+        var corrected = Brush(CORRECTION_BRUSH);
+        var corrections = source.Corrections ?? [];
         var inlines = new InlineCollection();
         var cuts = Cuts(source);
 
@@ -110,10 +158,17 @@ public static class TextMarks
         {
             var (from, to) = (cuts[i], cuts[i + 1]);
             var run = new Run(source.Text[from..to]);
-            var inPassage = source.Passage is { } passage && from >= passage.Start && to <= passage.End;
-            var inWord = source.Words.Any(word => from >= word.Start && to <= word.End);
+            var inPassage = Covers(source.Passage, from, to);
+            var inPhrase = Covers(source.Phrase, from, to);
+            var inWord = source.Words.Any(word => Covers(word, from, to));
+            var inCorrection = corrections.Any(mark => Covers(mark, from, to));
 
-            if (inPassage || inWord)
+            if (inPhrase)
+            {
+                run.Background = phraseGround;
+                run.Foreground = phraseText;
+            }
+            else if (inPassage || inWord)
             {
                 run.Background = ground;
             }
@@ -124,11 +179,29 @@ public static class TextMarks
                 run.Foreground = accent;
             }
 
+            if (inCorrection)
+            {
+                run.Foreground = corrected;
+                run.TextDecorations = TextDecorations.Underline;
+            }
+
             inlines.Add(run);
         }
 
         block.Text = null;
         block.Inlines = inlines;
+    }
+
+    /// <summary>
+    /// Tells whether a mark covers a piece of the text.
+    /// </summary>
+    /// <param name="mark">The mark, or <see langword="null"/>.</param>
+    /// <param name="from">Where the piece starts.</param>
+    /// <param name="to">Where it ends.</param>
+    /// <returns><see langword="true"/> when the piece lies inside the mark.</returns>
+    private static bool Covers(TextMark? mark, int from, int to)
+    {
+        return mark is { } covering && from >= covering.Start && to <= covering.End;
     }
 
     /// <summary>
@@ -138,8 +211,17 @@ public static class TextMarks
     /// <returns>The places, in order, without repeats.</returns>
     private static List<int> Cuts(MarkedText source)
     {
+        var marks = source.Words.Concat(source.Corrections ?? []);
+        foreach (var single in new[] { source.Passage, source.Phrase })
+        {
+            if (single is { } mark)
+            {
+                marks = marks.Append(mark);
+            }
+        }
+
         var cuts = new SortedSet<int> { 0, source.Text.Length };
-        foreach (var mark in source.Passage is { } passage ? source.Words.Append(passage) : source.Words)
+        foreach (var mark in marks)
         {
             cuts.Add(Math.Clamp(mark.Start, 0, source.Text.Length));
             cuts.Add(Math.Clamp(mark.End, 0, source.Text.Length));

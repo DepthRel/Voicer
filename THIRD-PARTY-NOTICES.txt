@@ -69,6 +69,10 @@ Kokoro 82M v1.0 with its voices (GGUF F32   Apache-2.0     hexgrad — huggingfa
 bge-m3 (GGUF Q8_0), the model of the        MIT            BAAI (Beijing Academy of Artificial Intelligence) —
   search by meaning, run by llama-server                   huggingface.co/BAAI/bge-m3; converted to GGUF by the ggml-org
   of the build above                                       project — huggingface.co/ggml-org/bge-m3-Q8_0-GGUF
+Qwen3-4B-Instruct-2507 and Qwen3-1.7B       Apache-2.0     The Qwen team, Alibaba Cloud — github.com/QwenLM/Qwen3;
+  (GGUF Q4_K_M), the light models of the                   quantized to GGUF by Unsloth — huggingface.co/unsloth/
+  summaries, run by llama-server of the                    Qwen3-4B-Instruct-2507-GGUF and huggingface.co/unsloth/
+  build above                                              Qwen3-1.7B-GGUF
 
 On Linux and macOS Voicer uses the FFmpeg of the system.
 
@@ -121,7 +125,7 @@ The Inter font is licensed under the SIL Open Font License, Version 1.1; the ful
 https://openfontlicense.org/open-font-license-official-text/ and in the Inter repository (github.com/rsms/inter).
 
 
-Apache License 2.0 (SQLitePCLRaw, the LLVM OpenMP runtime, Qwen3-TTS, Kokoro)
+Apache License 2.0 (SQLitePCLRaw, the LLVM OpenMP runtime, Qwen3-TTS, Kokoro, Qwen3)
 ----------------------------------------------------------------------------
 
 Apache License

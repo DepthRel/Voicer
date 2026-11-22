@@ -1,3 +1,5 @@
+using Voicer.Core.Models;
+
 namespace Voicer.Core.Embeddings;
 
 /// <summary>
@@ -18,7 +20,7 @@ public sealed record EmbeddingModel(
     Uri DownloadUri,
     long SizeBytes,
     string Sha256,
-    int SlotTokens)
+    int SlotTokens) : IServerModel
 {
     /// <summary>
     /// The prefix that keeps the vectors of the models of the application apart from those of a server of the same name.
@@ -30,9 +32,7 @@ public sealed record EmbeddingModel(
     /// </summary>
     private const int SPECIAL_TOKENS = 8;
 
-    /// <summary>
-    /// Gets the key of the description of the model in the language packs.
-    /// </summary>
+    /// <inheritdoc />
     public string DescriptionKey => $"EmbeddingModel.{Id}.Description";
 
     /// <summary>

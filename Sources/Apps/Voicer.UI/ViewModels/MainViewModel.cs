@@ -1,12 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Voicer.UI.Enums;
+using Voicer.UI.ViewModels.Items;
 using Voicer.UI.ViewModels.Pages;
 
 namespace Voicer.UI.ViewModels;
 
 /// <summary>
-/// The main window: the tabs and the page of the selected one.
+/// The main window: the tabs, the page of the selected one, and the models of Voicer held in memory right now.
 /// </summary>
 public sealed partial class MainViewModel : ObservableObject
 {
@@ -58,6 +59,12 @@ public sealed partial class MainViewModel : ObservableObject
     public SettingsViewModel Settings => _settings ?? throw new InvalidOperationException("The pages are not attached.");
 
     /// <summary>
+    /// Gets the llama-servers of the models of Voicer, of the summaries and of the search: the tab strip shows each one
+    /// that holds a model in memory, with a button that unloads it.
+    /// </summary>
+    public IReadOnlyList<LlamaServerViewModel> LoadedModels { get; private set; } = [];
+
+    /// <summary>
     /// Gets a value indicating whether the Transcription tab is selected.
     /// </summary>
     public bool IsTranscriptionSelected => SelectedTab == TabKey.Transcription;
@@ -102,11 +109,24 @@ public sealed partial class MainViewModel : ObservableObject
         _generation = generation ?? throw new ArgumentNullException(nameof(generation));
         _history = history ?? throw new ArgumentNullException(nameof(history));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        LoadedModels = [settings.Summaries.LocalServer, settings.Search.LocalServer];
+        OnPropertyChanged(nameof(LoadedModels));
         settings.SpeechModels.Changed += (_, _) => transcription.RefreshModels();
         settings.VoiceModels.Changed += (_, _) => generation.RefreshModels();
 
         OnPropertyChanged(nameof(CurrentPage));
         CurrentPage.Activate();
+    }
+
+    /// <summary>
+    /// Reads again which models of Voicer are in memory and what they take.
+    /// </summary>
+    public void RefreshLoadedModels()
+    {
+        foreach (var model in LoadedModels)
+        {
+            model.Refresh();
+        }
     }
 
     /// <summary>

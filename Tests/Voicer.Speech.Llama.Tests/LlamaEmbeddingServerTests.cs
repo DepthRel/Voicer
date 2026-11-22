@@ -6,6 +6,7 @@ using Voicer.Core.Summaries;
 using Voicer.Localization;
 using Voicer.Speech.Llama.Embeddings;
 using Voicer.Speech.Llama.Enums;
+using Voicer.Speech.Llama.Servers;
 using Voicer.Speech.Llama.Tools;
 
 namespace Voicer.Speech.Llama.Tests;
@@ -245,7 +246,7 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
 
         var failure = await start.Should().ThrowAsync<InvalidDataException>();
         TestTexts.English.Describe(failure.Which).Should().Be(
-            TestTexts.English.Format("Search.ServerFailed", _model.Name, "error loading model: bert model needs to define token type count"));
+            TestTexts.English.Format("LlamaServer.Failed", _model.Name, "error loading model: bert model needs to define token type count"));
         _started[0].IsDisposed.Should().BeTrue();
     }
 
@@ -262,7 +263,7 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
         _time.Advance(_start);
 
         var failure = await ((Func<Task>)(() => start)).Should().ThrowAsync<InvalidDataException>();
-        TestTexts.English.Describe(failure.Which).Should().Be(TestTexts.English.Format("Search.ServerTimeout", _model.Name, "120"));
+        TestTexts.English.Describe(failure.Which).Should().Be(TestTexts.English.Format("LlamaServer.Timeout", _model.Name, "120"));
         _started[0].IsDisposed.Should().BeTrue();
     }
 
@@ -293,7 +294,7 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
         _store.IsInstalled(_model).Returns(false);
 
         var withoutModel = await ((Func<Task>)(() => UseAsync(_model, CancellationToken.None))).Should().ThrowAsync<FileNotFoundException>();
-        TestTexts.English.Describe(withoutModel.Which).Should().Be(TestTexts.English.Format("Search.ModelMissing", _model.Name));
+        TestTexts.English.Describe(withoutModel.Which).Should().Be(TestTexts.English.Format("LlamaServer.ModelMissing", _model.Name));
 
         _locator.LocateServer().Returns((string?)null);
 
@@ -326,20 +327,20 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
     {
         var starting = new FakeProcess();
         _next = () => starting;
-        _server.Status().Should().Be(EmbeddingServerStatus.Stopped);
+        _server.Status().Should().Be(LlamaServerStatus.Stopped);
 
         var acquiring = _server.AcquireAsync(_model, CancellationToken.None);
 
-        _server.Status().Should().Be(new EmbeddingServerStatus(EmbeddingServerState.Starting, _model.Name, null, null));
+        _server.Status().Should().Be(new LlamaServerStatus(LlamaServerState.Starting, _model.Name, null, null));
 
         starting.MakeReady(READY_LINE);
         var lease = await acquiring;
 
-        _server.Status().Should().Be(new EmbeddingServerStatus(EmbeddingServerState.Busy, _model.Name, starting.Usage, null));
+        _server.Status().Should().Be(new LlamaServerStatus(LlamaServerState.Busy, _model.Name, starting.Usage, null));
 
         lease.Dispose();
 
-        _server.Status().Should().Be(new EmbeddingServerStatus(EmbeddingServerState.Idle, _model.Name, starting.Usage, _time.GetUtcNow() + _idle));
+        _server.Status().Should().Be(new LlamaServerStatus(LlamaServerState.Idle, _model.Name, starting.Usage, _time.GetUtcNow() + _idle));
     }
 
     /// <summary>
@@ -358,7 +359,7 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
 
         _server.TryStop().Should().BeTrue();
         _started[0].IsDisposed.Should().BeTrue();
-        _server.Status().Should().Be(EmbeddingServerStatus.Stopped);
+        _server.Status().Should().Be(LlamaServerStatus.Stopped);
 
         _next = () => new FakeProcess();
         var starting = _server.AcquireAsync(_model, CancellationToken.None);
@@ -368,6 +369,46 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
 
         _started[1].MakeReady(READY_LINE);
         (await starting).Dispose();
+    }
+
+    /// <summary>
+    /// The user stops a server at once even while a search holds it: the process ends, giving the lease back later
+    /// changes nothing, and the next search starts a new server.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Stop_EndsAServerInUse()
+    {
+        var lease = await _server.AcquireAsync(_model, CancellationToken.None);
+
+        _server.Stop();
+
+        _started[0].IsDisposed.Should().BeTrue();
+        _server.Status().Should().Be(LlamaServerStatus.Stopped);
+
+        lease.Dispose();
+        _time.Advance(_idle * 2);
+        _server.Status().Should().Be(LlamaServerStatus.Stopped);
+
+        (await _server.AcquireAsync(_model, CancellationToken.None)).Dispose();
+        _started.Should().HaveCount(2);
+    }
+
+    /// <summary>
+    /// The user unloads a model that is still loading: the start says the model was unloaded, not that it is broken.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Stop_WhileStarting_SaysTheModelWasUnloaded()
+    {
+        _next = () => new FakeProcess();
+        var starting = _server.AcquireAsync(_model, CancellationToken.None);
+
+        _server.Stop();
+
+        _started[0].IsDisposed.Should().BeTrue();
+        var failure = await ((Func<Task>)(() => starting)).Should().ThrowAsync<InvalidDataException>();
+        TestTexts.English.Describe(failure.Which).Should().Be(TestTexts.English.Format("LlamaServer.Unloaded", _model.Name));
     }
 
     /// <summary>
@@ -392,9 +433,9 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
     [Fact]
     public void ReadAddress_TakesOnlyALocalAddress()
     {
-        LlamaEmbeddingServer.ReadAddress(READY_LINE).Should().Be("http://127.0.0.1:54230");
-        LlamaEmbeddingServer.ReadAddress("listening on http://0.0.0.0:8080").Should().BeNull();
-        LlamaEmbeddingServer.ReadAddress("load_model: loading model").Should().BeNull();
+        LlamaServerOutput.ReadAddress(READY_LINE).Should().Be("http://127.0.0.1:54230");
+        LlamaServerOutput.ReadAddress("listening on http://0.0.0.0:8080").Should().BeNull();
+        LlamaServerOutput.ReadAddress("load_model: loading model").Should().BeNull();
     }
 
     /// <summary>

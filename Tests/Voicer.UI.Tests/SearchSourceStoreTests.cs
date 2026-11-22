@@ -51,26 +51,37 @@ public sealed class SearchSourceStoreTests
     {
         _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
 
-        _store.Save(SearchSource.Off);
+        _store.Save(ModelSource.Off);
 
-        _store.Load().Should().Be(SearchSource.Off);
+        _store.Load().Should().Be(ModelSource.Off);
         _values["search.source"].Should().Be("Off");
     }
 
     /// <summary>
     /// Before the first choice the source follows what is there, so an update changes nothing: a downloaded model of
-    /// Voicer first, then a model of embeddings of the server, then none.
+    /// Voicer first, then a model of embeddings of the server.
     /// </summary>
     [Fact]
     public void FirstChoice_FollowsWhatIsThere()
     {
-        _store.Load().Should().Be(SearchSource.Off);
-
         _server.Load().Returns(SummaryPreferences.Default with { EmbeddingModel = "text-embedding-bge-m3" });
-        _store.Load().Should().Be(SearchSource.Server);
+        _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
+
+        _store.Load().Should().Be(ModelSource.Local);
+    }
+
+    /// <summary>
+    /// The first guess is remembered at once, so what the settings show is what is used.
+    /// </summary>
+    [Fact]
+    public void FirstGuess_IsRemembered()
+    {
+        _server.Load().Returns(SummaryPreferences.Default with { EmbeddingModel = "text-embedding-bge-m3" });
+        _store.Load().Should().Be(ModelSource.Server);
+        _values["search.source"].Should().Be("Server");
 
         _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
-        _store.Load().Should().Be(SearchSource.Local);
+        _store.Load().Should().Be(ModelSource.Server);
     }
 
     /// <summary>
@@ -81,6 +92,6 @@ public sealed class SearchSourceStoreTests
     {
         _values["search.source"] = "42";
 
-        _store.Load().Should().Be(SearchSource.Off);
+        _store.Load().Should().Be(ModelSource.Off);
     }
 }

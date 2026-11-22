@@ -102,8 +102,8 @@
               </ComboBox.ItemTemplate>
             </ComboBox>
 
-            <TextBlock Grid.Column="2" Classes="field-label" Text="{loc:Loc Generation.Voice}" IsVisible="{Binding HasVoices}" />
-            <ComboBox Grid.Row="1" Grid.Column="2"
+            <TextBlock Grid.Column="{Binding VoiceColumn}" Classes="field-label" Text="{loc:Loc Generation.Voice}" IsVisible="{Binding HasVoices}" />
+            <ComboBox Grid.Row="1" Grid.Column="{Binding VoiceColumn}"
                       ItemsSource="{Binding Voices}"
                       SelectedItem="{Binding SelectedVoice}"
                       IsEnabled="{Binding IsIdle}"

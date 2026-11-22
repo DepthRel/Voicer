@@ -2,7 +2,8 @@ using FluentAssertions;
 using NSubstitute;
 using Voicer.Core.Embeddings;
 using Voicer.Core.Summaries;
-using Voicer.Speech.Llama.Embeddings;
+using Voicer.Speech.Llama.Enums;
+using Voicer.Speech.Llama.Servers;
 using Voicer.Speech.Llama.Tools;
 using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
@@ -38,14 +39,20 @@ public sealed class SearchSettingsViewModelTests
     private readonly ILlamaCppLocator _llamaCpp = Substitute.For<ILlamaCppLocator>();
 
     /// <summary>
+    /// The llama-server of the model of Voicer.
+    /// </summary>
+    private readonly ILlamaServerMonitor _monitor = Substitute.For<ILlamaServerMonitor>();
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="SearchSettingsViewModelTests"/> class: nothing is chosen, downloaded
     /// or installed yet.
     /// </summary>
     public SearchSettingsViewModelTests()
     {
         _server.Load().Returns(SummaryPreferences.Default);
-        _store.Load().Returns(SearchSource.Off);
+        _store.Load().Returns(ModelSource.Off);
         _llamaCpp.LocateServer().Returns((string?)null);
+        _monitor.Status().Returns(LlamaServerStatus.Stopped);
     }
 
     /// <summary>
@@ -54,7 +61,7 @@ public sealed class SearchSettingsViewModelTests
     [Fact]
     public void Load_ShowsTheRememberedChoice()
     {
-        _store.Load().Returns(SearchSource.Server);
+        _store.Load().Returns(ModelSource.Server);
 
         var search = Search();
 
@@ -74,10 +81,26 @@ public sealed class SearchSettingsViewModelTests
         search.IsLocal = true;
         search.IsOff = false;
 
-        search.Source.Should().Be(SearchSource.Local);
+        search.Source.Should().Be(ModelSource.Local);
         search.IsOff.Should().BeFalse();
-        _store.Received(1).Save(SearchSource.Local);
-        _store.DidNotReceive().Save(SearchSource.Off);
+        _store.Received(1).Save(ModelSource.Local);
+        _store.DidNotReceive().Save(ModelSource.Off);
+    }
+
+    /// <summary>
+    /// Leaving the model of Voicer for another source unloads it at once: nothing keeps it in memory any more.
+    /// </summary>
+    [Fact]
+    public void LeavingTheModelOfVoicer_UnloadsIt()
+    {
+        _store.Load().Returns(ModelSource.Local);
+        _monitor.Status().Returns(new LlamaServerStatus(LlamaServerState.Idle, "bge-m3", null, null));
+        var search = Search();
+        search.Refresh();
+
+        search.IsServer = true;
+
+        _monitor.Received(1).Stop();
     }
 
     /// <summary>
@@ -115,8 +138,6 @@ public sealed class SearchSettingsViewModelTests
     /// <returns>The view model.</returns>
     private SearchSettingsViewModel Search()
     {
-        var monitor = Substitute.For<IEmbeddingServerMonitor>();
-        monitor.Status().Returns(EmbeddingServerStatus.Stopped);
         var dialogs = Substitute.For<IDialogService>();
 
         return new SearchSettingsViewModel(
@@ -126,7 +147,7 @@ public sealed class SearchSettingsViewModelTests
             _server,
             _llamaCpp,
             new ModelCatalogViewModel(TestTexts.Russian, "Settings.SearchModels", "Models.SearchWindowHint", [], dialogs),
-            new SearchServerViewModel(TestTexts.Russian, monitor, TimeProvider.System),
-            new SummarySettingsViewModel(TestTexts.Russian, _server, Substitute.For<ILanguageModelClient>(), _store));
+            new LlamaServerViewModel(TestTexts.Russian, _monitor, TimeProvider.System),
+            new LanguageServerSettingsViewModel(TestTexts.Russian, _server, Substitute.For<ILanguageModelClient>(), _store));
     }
 }

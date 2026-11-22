@@ -17,7 +17,7 @@ tabs are Transcription, Generation, History and Settings.
 | `Sources/Infrastructure/Voicer.LanguageModels` | the client of servers of language models with the OpenAI-compatible API (LM Studio, Ollama, llama.cpp, Jan): the list of models, streamed answers |
 | `Sources/Infrastructure/Voicer.Audio` | the player of a kept sound: `AudioPlayer` over the FFmpeg decoder and the sound device (OpenAL Soft) |
 | `Sources/Speech/Voicer.Speech.Whisper` | Whisper through Whisper.net: the list of devices, the recognition, the worker host |
-| `Sources/Speech/Voicer.Speech.Llama` | text to speech with llama.cpp: its pinned build and installation, the arguments of llama-tts and the synthesizer that runs it per piece of text; the llama-server of the search by meaning (`LlamaEmbeddingServer`), its state and its stop |
+| `Sources/Speech/Voicer.Speech.Llama` | text to speech with llama.cpp: its pinned build and installation, the arguments of llama-tts and the synthesizer that runs it per piece of text; the llama-servers of the models of Voicer (`LlamaModelServer`): of the search by meaning (`LlamaEmbeddingServer`) and of the summaries (`LlamaChatServer`), their state and their stop |
 | `Sources/Apps/Voicer.UI` | the Avalonia application (MVVM with CommunityToolkit.Mvvm); the same program is the worker |
 | `Sources/Apps/Voicer.Pages` | the project page: static files published by GitHub Pages |
 
@@ -115,6 +115,18 @@ jump or a new speed starts a new run of the decoder; the position is the start o
 played times the speed. The buttons jump ten seconds back and forward; the slider is applied on the next refresh of
 the window (five times a second), so dragging it does not start FFmpeg for every pixel.
 
+As the sound plays, the phrase being said is marked in the text and kept in view (`TranscriptLayout`, the window
+follows the player five times a second and scrolls only when the phrase leaves the view). The text of a recognition
+can be corrected from the menu of the text: a word or a selection, written anew or deleted, the sound paused meanwhile.
+The recognized fragments in `segments` never change: a correction is a row of `corrections` (schema version 6: the
+phrase, the place and the length in its trimmed text, the recognized piece, the replacement, the time) that lies over
+them (`TranscriptCorrections`, Core). A correction over another one joins it, so the recognized piece stays the text of
+Whisper; putting it back takes the correction away, and a row that no longer fits the text is left out. A corrected
+place is underlined and tells what was recognized there; the menu takes it back. Saving the corrections writes the
+passages of the record and the beginning of its text in the list anew in the same transaction; the vectors of the new
+passages are computed by the next search. The export, a new summary and the questions take the corrected text; a
+generated speech is what was said and is not corrected.
+
 ## Summaries
 
 A summary is written by a language model on a server the user runs: LM Studio, Ollama, llama.cpp (`llama-server`),
@@ -134,6 +146,18 @@ The summary is kept with its record (`summaries`, schema version 3: text, model,
 goes with the record. The Transcription page offers "Summarize the text" after a recognition and opens the window of
 the record when it is done; the window shows the summary under the text, writes it (again) and streams it as it
 arrives. The export to Markdown puts the summary before the text.
+
+The settings hold one choice of what writes the summaries and the answers (`ModelSource`, kept as `summary.source`):
+off, a light model of Voicer, or a model of the server. The connection to the server (its address, key and models) is a
+section of its own that the summaries and the search share. The models of Voicer are Qwen3-4B-Instruct-2507 and
+Qwen3-1.7B (Apache-2.0, GGUF Q4_K_M, about a hundred languages); they are weaker than a full model of a server, and the
+settings say so. The first one installed runs in `llama-server` of the pinned build (`LlamaChatServer`), like the model
+of the search: on 127.0.0.1 only, on a free port, with a random key, one slot with a context of 8192 tokens;
+`--reasoning-budget 0` keeps Qwen3-1.7B from reasoning aloud. `ChatModelSource` opens a session for a summary or a
+question and holds the server until it ends. Every model of Voicer held in memory is shown in the tab strip on every
+page, with the memory it takes and a button that unloads it at once, even while it works: that work fails with a
+message that the model was unloaded, and the next request starts it again. A model of Voicer whose source is no longer
+chosen is unloaded too.
 
 ## Search and questions
 
@@ -157,7 +181,7 @@ indexed by the upgrade).
   pinned build (`LlamaEmbeddingServer`): on 127.0.0.1 only, on a free port, with a random key; started by the first
   search, held by a lease for every request, ended after five minutes without requests, on a stop in the settings and
   with the application. The settings show its state, the memory and the share of the processor of its process.
-  The section "Search by meaning" of the settings holds one choice of the source (`SearchSource`, kept as
+  The section "Models of the history search" of the settings holds one choice of the source (`ModelSource`, kept as
   `search.source`): off, a model of Voicer, or a model of embeddings of the server; a choice that is not ready (the
   model is not downloaded, llama.cpp is missing, no model of the server is chosen) searches by words and says why.
   Before the first choice the source follows what is installed. When the server is the source, its check in the

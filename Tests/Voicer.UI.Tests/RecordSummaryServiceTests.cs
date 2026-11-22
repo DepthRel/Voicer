@@ -1,10 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Voicer.Core.History;
 using Voicer.Core.Summaries;
 using Voicer.Core.Transcripts;
-using Voicer.UI.Services.Configuration;
 using Voicer.UI.Services.Summaries;
 
 namespace Voicer.UI.Tests;
@@ -25,9 +25,14 @@ public sealed class RecordSummaryServiceTests
     private readonly ISummarizer _summarizer = Substitute.For<ISummarizer>();
 
     /// <summary>
-    /// Remembers the choice of the user.
+    /// The chosen model of the summaries.
     /// </summary>
-    private readonly ISummaryPreferencesStore _preferences = Substitute.For<ISummaryPreferencesStore>();
+    private readonly IChatModelSource _chat = Substitute.For<IChatModelSource>();
+
+    /// <summary>
+    /// How many sessions of the model ended.
+    /// </summary>
+    private int _ended;
 
     /// <summary>
     /// The history.
@@ -49,17 +54,18 @@ public sealed class RecordSummaryServiceTests
     /// </summary>
     public RecordSummaryServiceTests()
     {
-        _service = new RecordSummaryService(_summarizer, _preferences, _history, _time);
+        _service = new RecordSummaryService(_summarizer, _chat, _history, _time);
     }
 
     /// <summary>
-    /// The summary is made with the chosen server, model and context, dated and kept with the record.
+    /// The summary is made with the chosen model and context, dated and kept with the record; the model is given back after.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
     public async Task Summarize_KeepsTheSummary()
     {
-        _preferences.Load().Returns(new SummaryPreferences("http://localhost:1234/v1", string.Empty, "qwen3-8b", 16384, string.Empty));
+        LanguageModelEndpoint.TryCreate("http://localhost:1234/v1", string.Empty, out var endpoint);
+        _chat.OpenAsync(default).ReturnsForAnyArgs(_ => new ChatSession(new SummarySettings(endpoint!, "qwen3-8b", 16384), lease: new Release(() => _ended++)));
         _summarizer.SummarizeAsync(default!, default!, default, default).ReturnsForAnyArgs("- point");
         _history.SaveSummaryAsync(default, default!, default).ReturnsForAnyArgs(true);
 
@@ -72,6 +78,7 @@ public sealed class RecordSummaryServiceTests
             null,
             CancellationToken.None);
         await _history.Received(1).SaveSummaryAsync(5, summary, CancellationToken.None);
+        _ended.Should().Be(1);
     }
 
     /// <summary>
@@ -81,12 +88,25 @@ public sealed class RecordSummaryServiceTests
     [Fact]
     public async Task Summarize_WithoutAModel_IsRefused()
     {
-        _preferences.Load().Returns(SummaryPreferences.Default);
+        _chat.IsAvailable.Returns(false);
+        _chat.OpenAsync(default).ThrowsAsyncForAnyArgs(new InvalidOperationException("No model."));
 
         _service.IsConfigured.Should().BeFalse();
         var act = () => _service.SummarizeAsync(5, _transcript, null, CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
         await _summarizer.DidNotReceiveWithAnyArgs().SummarizeAsync(default!, default!, default, default);
+    }
+
+    /// <summary>
+    /// Gives a lease back by calling an action.
+    /// </summary>
+    /// <param name="release">The action.</param>
+    private sealed class Release(Action release) : IDisposable
+    {
+        /// <summary>
+        /// Calls the action.
+        /// </summary>
+        public void Dispose() => release();
     }
 }

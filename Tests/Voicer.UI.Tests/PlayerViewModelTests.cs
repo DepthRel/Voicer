@@ -162,4 +162,20 @@ public sealed class PlayerViewModelTests
         _view.Error.Should().Be(TestTexts.Russian.Format("Player.Failed", "device lost"));
         _view.IsPlaying.Should().BeFalse();
     }
+
+    /// <summary>
+    /// A pause asked by the window stops the sound and shows it stopped.
+    /// </summary>
+    [Fact]
+    public void Pause_PausesThePlayer()
+    {
+        _player.State.Returns(PlaybackState.Playing);
+        _view.Refresh();
+        _player.When(p => p.Pause()).Do(_ => _player.State.Returns(PlaybackState.Paused));
+
+        _view.Pause();
+
+        _player.Received(1).Pause();
+        _view.IsPlaying.Should().BeFalse();
+    }
 }

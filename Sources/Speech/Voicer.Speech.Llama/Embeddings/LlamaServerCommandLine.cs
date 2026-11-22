@@ -1,5 +1,6 @@
 using System.Globalization;
 using Voicer.Core.Embeddings;
+using Voicer.Speech.Llama.Servers;
 
 namespace Voicer.Speech.Llama.Embeddings;
 
@@ -9,11 +10,6 @@ namespace Voicer.Speech.Llama.Embeddings;
 /// </summary>
 public static class LlamaServerCommandLine
 {
-    /// <summary>
-    /// The only address the server listens on: nothing outside the computer reaches it.
-    /// </summary>
-    public const string HOST = "127.0.0.1";
-
     /// <summary>
     /// How many texts the server embeds at once, each in a slot of its own.
     /// </summary>
@@ -40,7 +36,7 @@ public static class LlamaServerCommandLine
             "-m", modelFile,
             "--embedding",
             "--alias", model.Id,
-            "--host", HOST,
+            "--host", LlamaServerHost.ADDRESS,
             "--port", "0",
             "--api-key", apiKey,
             "--no-webui",

@@ -1,3 +1,4 @@
+using Voicer.Core.Corrections;
 using Voicer.Core.Transcripts;
 
 namespace Voicer.Core.History;
@@ -51,12 +52,30 @@ public interface ITranscriptHistory
     Task<IReadOnlyList<HistoryEntry>> ListAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Reads the whole text of a record.
+    /// Reads the whole text of a record, with the corrections of the user applied.
     /// </summary>
     /// <param name="id">The identifier of the record.</param>
     /// <param name="cancellationToken">Stops the work.</param>
-    /// <returns>The recognized text, or <see langword="null"/> when there is no such record.</returns>
+    /// <returns>The corrected text, or <see langword="null"/> when there is no such record.</returns>
     Task<Transcript?> FindAsync(long id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads the text of a record as it was recognized, with the corrections the user made over it.
+    /// </summary>
+    /// <param name="id">The identifier of the record.</param>
+    /// <param name="cancellationToken">Stops the work.</param>
+    /// <returns>The recognized text and its corrections, or <see langword="null"/> when there is no such record.</returns>
+    Task<RecordText?> FindTextAsync(long id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Keeps the corrections of a record in place of the ones it had; the search and the beginning of the text in the list
+    /// follow the corrected text. The recognized text is not changed.
+    /// </summary>
+    /// <param name="id">The identifier of the record.</param>
+    /// <param name="corrections">The corrections of the record; empty to take them all back.</param>
+    /// <param name="cancellationToken">Stops the work.</param>
+    /// <returns><see langword="true"/> when the record is there and keeps the corrections.</returns>
+    Task<bool> SaveCorrectionsAsync(long id, IReadOnlyList<TextCorrection> corrections, CancellationToken cancellationToken);
 
     /// <summary>
     /// Deletes a record with everything that belongs to it; the deleted data is overwritten, not only forgotten.

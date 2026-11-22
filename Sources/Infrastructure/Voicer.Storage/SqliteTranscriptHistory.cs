@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using Voicer.Core.Corrections;
 using Voicer.Core.Enums;
 using Voicer.Core.History;
 using Voicer.Core.Transcripts;
@@ -171,31 +172,47 @@ public sealed class SqliteTranscriptHistory : ITranscriptHistory
     /// <inheritdoc />
     public Task<Transcript?> FindAsync(long id, CancellationToken cancellationToken)
     {
+        return _database.RunAsync(connection => ReadText(connection, null, id)?.Apply().Transcript, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RecordText?> FindTextAsync(long id, CancellationToken cancellationToken)
+    {
+        return _database.RunAsync(connection => ReadText(connection, null, id), cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> SaveCorrectionsAsync(long id, IReadOnlyList<TextCorrection> corrections, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(corrections);
+
         return _database.RunAsync(
             connection =>
             {
-                using var command = connection.CreateCommand();
-                command.CommandText = """
-                    SELECT source_path, model, device, language, created_at_ms, utc_offset_min, kind
-                    FROM records
-                    WHERE id = $id;
-                    """;
-                command.Parameters.AddWithValue("$id", id);
-
-                using var reader = command.ExecuteReader();
-                if (!reader.Read())
+                using var transaction = connection.BeginTransaction();
+                if (ReadText(connection, transaction, id) is not { } text)
                 {
-                    return null;
+                    return false;
                 }
 
-                return new Transcript(
-                    reader.GetString(0),
-                    reader.GetString(1),
-                    reader.GetString(2),
-                    reader.IsDBNull(3) ? null : reader.GetString(3),
-                    HistoryDatabase.Moment(reader.GetInt64(4), reader.GetInt32(5)),
-                    TextRows.ReadSegments(connection, null, id),
-                    KindOf(reader.GetInt64(6)));
+                CorrectionRows.Replace(connection, transaction, id, corrections);
+                var corrected = new RecordText(text.Original, corrections).Apply().Transcript;
+
+                // The passages are written again from the corrected text; their vectors go with them and the search
+                // computes new ones when it needs them.
+                using (var command = connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = "DELETE FROM passages WHERE record_id = $id; UPDATE records SET preview = $preview WHERE id = $id;";
+                    command.Parameters.AddWithValue("$id", id);
+                    command.Parameters.AddWithValue("$preview", Preview(corrected.Text));
+                    command.ExecuteNonQuery();
+                }
+
+                TextRows.InsertPassages(connection, transaction, id, corrected.Segments);
+                transaction.Commit();
+
+                return true;
             },
             cancellationToken);
     }
@@ -220,6 +237,42 @@ public sealed class SqliteTranscriptHistory : ITranscriptHistory
                 return deleted;
             },
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads a record as it was recognized, with its corrections.
+    /// </summary>
+    /// <param name="connection">An open connection.</param>
+    /// <param name="transaction">The transaction the reading belongs to, or <see langword="null"/>.</param>
+    /// <param name="id">The identifier of the record.</param>
+    /// <returns>The recognized text and its corrections, or <see langword="null"/> when there is no such record.</returns>
+    private static RecordText? ReadText(SqliteConnection connection, SqliteTransaction? transaction, long id)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT source_path, model, device, language, created_at_ms, utc_offset_min, kind
+            FROM records
+            WHERE id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", id);
+
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        var original = new Transcript(
+            reader.GetString(0),
+            reader.GetString(1),
+            reader.GetString(2),
+            reader.IsDBNull(3) ? null : reader.GetString(3),
+            HistoryDatabase.Moment(reader.GetInt64(4), reader.GetInt32(5)),
+            TextRows.ReadSegments(connection, transaction, id),
+            KindOf(reader.GetInt64(6)));
+
+        return new RecordText(original, CorrectionRows.Read(connection, transaction, id));
     }
 
     /// <summary>

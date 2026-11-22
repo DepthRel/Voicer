@@ -2,6 +2,7 @@ using Voicer.Core.Embeddings;
 using Voicer.Core.Search;
 using Voicer.Core.Summaries;
 using Voicer.Localization;
+using Voicer.Speech.Llama.Servers;
 
 namespace Voicer.Speech.Llama.Embeddings;
 
@@ -13,7 +14,7 @@ public sealed class LocalTextEmbedder : ITextEmbedder
     /// <summary>
     /// Runs the server of the model.
     /// </summary>
-    private readonly ILlamaEmbeddingServer _server;
+    private readonly ILlamaModelServer<EmbeddingModel> _server;
 
     /// <summary>
     /// Talks to the server.
@@ -31,7 +32,7 @@ public sealed class LocalTextEmbedder : ITextEmbedder
     /// <param name="server">Runs the server of the model.</param>
     /// <param name="client">Talks to the server.</param>
     /// <param name="model">The model.</param>
-    public LocalTextEmbedder(ILlamaEmbeddingServer server, ILanguageModelClient client, EmbeddingModel model)
+    public LocalTextEmbedder(ILlamaModelServer<EmbeddingModel> server, ILanguageModelClient client, EmbeddingModel model)
     {
         _server = server ?? throw new ArgumentNullException(nameof(server));
         _client = client ?? throw new ArgumentNullException(nameof(client));

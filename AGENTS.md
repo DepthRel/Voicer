@@ -30,10 +30,12 @@ You are a senior software engineer. You design reliable, maintainable, secure an
   video driver must end the worker, never the window.
 - Text to speech runs only in `llama-tts` of the pinned llama.cpp build, a process of its own per piece of text,
   started without a shell: the model leaves memory with the process, and a native failure ends that process only.
-- The embeddings of the search by meaning with a model of Voicer run only in `llama-server` of the same pinned build,
-  a process of its own started without a shell, listening on 127.0.0.1 only, on a free port, with a random key. It is
-  started by a search, held by every request, and ended after a pause, by the user in the settings or with the
-  application; a native failure ends that process only, and the next search starts it again.
+- The models of Voicer for the search by meaning (embeddings) and for the summaries and answers (a light chat model)
+  run only in `llama-server` of the same pinned build, each kind in a process of its own started without a shell,
+  listening on 127.0.0.1 only, on a free port, with a random key. A server is started by a request, held by every
+  request, and ended after a pause, by the user (in the settings or in the tab strip, at once, even while it works), when
+  its source is no longer chosen, or with the application; a native failure ends that process only, and the next request
+  starts it again. A model held in memory is always shown in the tab strip.
 - Time comes from `TimeProvider`, so tests are deterministic.
 - Critical logic is covered by unit tests; external dependencies (processes, network, native libraries, files) are
   replaced with stubs.

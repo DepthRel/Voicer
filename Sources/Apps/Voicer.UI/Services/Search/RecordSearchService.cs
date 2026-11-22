@@ -1,6 +1,5 @@
 using Voicer.Core.Search;
-using Voicer.Localization;
-using Voicer.UI.Services.Configuration;
+using Voicer.UI.Services.Summaries;
 
 namespace Voicer.UI.Services.Search;
 
@@ -25,9 +24,9 @@ public sealed class RecordSearchService : IRecordSearchService
     private readonly IRecordQuestions _questions;
 
     /// <summary>
-    /// The choice of the server and the model of the answers.
+    /// The chosen model of the answers: of the server, or of Voicer.
     /// </summary>
-    private readonly ISummaryPreferencesStore _preferences;
+    private readonly IChatModelSource _chat;
 
     /// <summary>
     /// Chooses the model of the search by meaning.
@@ -39,13 +38,13 @@ public sealed class RecordSearchService : IRecordSearchService
     /// </summary>
     /// <param name="search">The search of the records.</param>
     /// <param name="questions">Answers questions about the records.</param>
-    /// <param name="preferences">The choice of the server and the model of the answers.</param>
+    /// <param name="chat">The chosen model of the answers: of the server, or of Voicer.</param>
     /// <param name="embedders">Chooses the model of the search by meaning.</param>
-    public RecordSearchService(IRecordSearch search, IRecordQuestions questions, ISummaryPreferencesStore preferences, ITextEmbedderSource embedders)
+    public RecordSearchService(IRecordSearch search, IRecordQuestions questions, IChatModelSource chat, ITextEmbedderSource embedders)
     {
         _search = search ?? throw new ArgumentNullException(nameof(search));
         _questions = questions ?? throw new ArgumentNullException(nameof(questions));
-        _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
+        _chat = chat ?? throw new ArgumentNullException(nameof(chat));
         _embedders = embedders ?? throw new ArgumentNullException(nameof(embedders));
     }
 
@@ -53,7 +52,7 @@ public sealed class RecordSearchService : IRecordSearchService
     public bool SearchesByMeaning => _embedders.Current() is not null;
 
     /// <inheritdoc />
-    public bool CanAsk => _preferences.Load().ToSettings() is not null;
+    public bool CanAsk => _chat.IsAvailable;
 
     /// <inheritdoc />
     public Task<IReadOnlyList<PassageHit>> SearchAsync(string query, IProgress<SearchProgress>? indexing, CancellationToken cancellationToken)
@@ -62,11 +61,10 @@ public sealed class RecordSearchService : IRecordSearchService
     }
 
     /// <inheritdoc />
-    public Task<QuestionAnswer> AskAsync(string question, IProgress<SearchProgress>? indexing, IProgress<string>? answerSoFar, CancellationToken cancellationToken)
+    public async Task<QuestionAnswer> AskAsync(string question, IProgress<SearchProgress>? indexing, IProgress<string>? answerSoFar, CancellationToken cancellationToken)
     {
-        var chat = _preferences.Load().ToSettings() ??
-            throw LocalizedError.Create(m => new InvalidOperationException(m), "Summary.NotConfigured");
+        using var session = await _chat.OpenAsync(cancellationToken);
 
-        return _questions.AskAsync(question, chat, _embedders.Current(), indexing, answerSoFar, cancellationToken);
+        return await session.RunAsync(chat => _questions.AskAsync(question, chat, _embedders.Current(), indexing, answerSoFar, cancellationToken));
     }
 }

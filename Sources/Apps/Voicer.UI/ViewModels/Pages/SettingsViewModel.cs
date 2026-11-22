@@ -8,8 +8,8 @@ using Voicer.UI.ViewModels.Items;
 namespace Voicer.UI.ViewModels.Pages;
 
 /// <summary>
-/// The settings: the language of the interface, the speech recognition and voice models, FFmpeg, llama.cpp and the
-/// summaries. The models are listed in windows of their own; the page shows how many of them are downloaded.
+/// The settings: the language of the interface, the speech recognition and voice models, the connection to a server of
+/// language models, the models of the summaries and of the search, FFmpeg and llama.cpp. The models are listed in windows of their own; the page shows how many of them are downloaded.
 /// </summary>
 public sealed partial class SettingsViewModel : PageViewModelBase
 {
@@ -25,10 +25,11 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     /// <param name="language">The language selector.</param>
     /// <param name="speechModels">The catalog of the speech recognition models.</param>
     /// <param name="voiceModels">The catalog of the voice models.</param>
+    /// <param name="connection">The connection to a server of language models, local or in the cloud.</param>
+    /// <param name="summaries">The model of the summaries and the answers: its source, the models of Voicer and their llama-server.</param>
     /// <param name="search">The search by meaning: its source, the models of Voicer and their llama-server.</param>
     /// <param name="ffmpeg">FFmpeg.</param>
     /// <param name="llamaCpp">llama.cpp, the engine of the voice models.</param>
-    /// <param name="summary">The server and the model of the summaries.</param>
     /// <param name="dataDirectory">The data folder.</param>
     /// <param name="dialogs">The dialogs that open the data folder.</param>
     public SettingsViewModel(
@@ -36,10 +37,11 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         LanguageViewModel language,
         ModelCatalogViewModel speechModels,
         ModelCatalogViewModel voiceModels,
+        LanguageServerSettingsViewModel connection,
+        SummaryModelSettingsViewModel summaries,
         SearchSettingsViewModel search,
         FfmpegItemViewModel ffmpeg,
         LlamaCppItemViewModel llamaCpp,
-        SummarySettingsViewModel summary,
         string dataDirectory,
         IDialogService dialogs)
         : base(localizer)
@@ -47,10 +49,11 @@ public sealed partial class SettingsViewModel : PageViewModelBase
         Language = language ?? throw new ArgumentNullException(nameof(language));
         SpeechModels = speechModels ?? throw new ArgumentNullException(nameof(speechModels));
         VoiceModels = voiceModels ?? throw new ArgumentNullException(nameof(voiceModels));
+        Connection = connection ?? throw new ArgumentNullException(nameof(connection));
+        Summaries = summaries ?? throw new ArgumentNullException(nameof(summaries));
         Search = search ?? throw new ArgumentNullException(nameof(search));
         Ffmpeg = ffmpeg ?? throw new ArgumentNullException(nameof(ffmpeg));
         LlamaCpp = llamaCpp ?? throw new ArgumentNullException(nameof(llamaCpp));
-        Summary = summary ?? throw new ArgumentNullException(nameof(summary));
         ArgumentException.ThrowIfNullOrWhiteSpace(dataDirectory);
         DataDirectory = dataDirectory;
         _dialogs = dialogs ?? throw new ArgumentNullException(nameof(dialogs));
@@ -72,6 +75,16 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     public ModelCatalogViewModel VoiceModels { get; }
 
     /// <summary>
+    /// Gets the connection to a server of language models, local or in the cloud.
+    /// </summary>
+    public LanguageServerSettingsViewModel Connection { get; }
+
+    /// <summary>
+    /// Gets the model of the summaries and the answers: its source, the models of Voicer and their llama-server.
+    /// </summary>
+    public SummaryModelSettingsViewModel Summaries { get; }
+
+    /// <summary>
     /// Gets the search by meaning: its source, the models of Voicer and their llama-server.
     /// </summary>
     public SearchSettingsViewModel Search { get; }
@@ -85,11 +98,6 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     /// Gets llama.cpp, the engine of the voice models.
     /// </summary>
     public LlamaCppItemViewModel LlamaCpp { get; }
-
-    /// <summary>
-    /// Gets the server and the model of the summaries.
-    /// </summary>
-    public SummarySettingsViewModel Summary { get; }
 
     /// <summary>
     /// Gets the data folder.
@@ -120,6 +128,7 @@ public sealed partial class SettingsViewModel : PageViewModelBase
     {
         Ffmpeg.RefreshCommand.Execute(null);
         LlamaCpp.Refresh();
+        Summaries.Refresh();
         Search.Refresh();
     }
 

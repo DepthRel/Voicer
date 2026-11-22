@@ -163,6 +163,15 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         Error = _player.Failure is { } failure ? _localizer.Format("Player.Failed", _localizer.Describe(failure)) : null;
     }
 
+    /// <summary>
+    /// Pauses the sound when the window needs the user's attention, and shows it paused.
+    /// </summary>
+    public void Pause()
+    {
+        _player.Pause();
+        Refresh();
+    }
+
     /// <inheritdoc />
     public void Dispose()
     {

@@ -311,6 +311,12 @@ public sealed partial class GenerationViewModel : PageViewModelBase, IDisposable
     public bool HasVoices => Voices.Count > 0;
 
     /// <summary>
+    /// Gets the column of the choice of the voice: beside the language, or in its place when the model has no choice of
+    /// language, so it is never left alone on the right.
+    /// </summary>
+    public int VoiceColumn => HasLanguageChoice ? 2 : 0;
+
+    /// <summary>
     /// Gets a value indicating whether the chosen model speaks in the voice of a sample.
     /// </summary>
     public bool CanUseSample => SelectedModel?.CanCloneVoice == true;
@@ -497,6 +503,7 @@ public sealed partial class GenerationViewModel : PageViewModelBase, IDisposable
         SelectedVoice = Voices.FirstOrDefault(v => v.Id == voice) ?? Voices.FirstOrDefault();
         OnPropertyChanged(nameof(HasLanguageChoice));
         OnPropertyChanged(nameof(HasVoices));
+        OnPropertyChanged(nameof(VoiceColumn));
     }
 
     /// <summary>
