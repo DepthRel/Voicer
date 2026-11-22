@@ -10,11 +10,12 @@
       3. ISCC compiles Scripts/App/voicer.iss into artifacts/publish/Voicer-<version>-setup.exe;
       4. the size and the SHA-256 of the installer are printed.
 
-    The wizard asks for whom to install. For the current user (the default, no administrator rights) it installs into
-    %LOCALAPPDATA%\Programs\Voicer, and the models, tools and settings stay in the Data folder inside the installation,
-    so an update never touches them. For all users it installs into Program Files with administrator rights and without
-    the voicer.portable marker: a user cannot write there, so every user keeps the data in %LOCALAPPDATA%\Voicer\Data.
-    The installer speaks the language of the operating system (English or Russian).
+    A page of the wizard, right after the greeting, asks whom to install for. For the current user (the default, no
+    administrator rights) it installs into %LOCALAPPDATA%\Programs\Voicer, and the models, tools and settings stay in the
+    Data folder inside the installation, so an update never touches them. For everyone it starts itself again with
+    administrator rights (/ALLUSERS) and installs into Program Files without the voicer.portable marker: a user cannot
+    write there, so every user keeps the data in %LOCALAPPDATA%\Voicer\Data. The wizard first asks for its language,
+    with the language of the operating system preselected.
 
 .PARAMETER Runtime
     The runtime identifier. Default: win-x64.
