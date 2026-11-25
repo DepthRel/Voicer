@@ -28,7 +28,8 @@ computer, on the video card or the processor: no cloud, no account, nothing leav
 - **History.** Every text and every narration is kept with its sound and plays back from any moment.
 - **Search and questions.** Find records by words or by meaning, ask a question and get an answer with references.
   The found words and passages are marked; the search by meaning runs on a downloaded model, no server needed.
-- **Summaries.** A language model on your own server (LM Studio, Ollama, llama.cpp…) sums up a long recording.
+- **Summaries.** A light model of Voicer, or a language model on your own server (LM Studio, Ollama, llama.cpp…),
+  sums up a long recording.
 - **Six languages** of the interface: English, Deutsch, Español, Français, Português, Русский.
 
 ## Getting started
@@ -57,7 +58,7 @@ silicon).
 | Processor | any 64-bit processor: Whisper Small and Kokoro run on it at a usable speed |
 | Video card | optional: with Vulkan or Metal, from 1 GB of video memory (Whisper Small) to 4 GB (Large v3) |
 | Disk | 0.2–3 GB per model, chosen in the settings |
-| Voice generation | Windows x64, Linux x64 and macOS on Apple silicon |
+| Voice generation and the models of Voicer for search and summaries | Windows x64, Linux x64 and macOS on Apple silicon (they run in llama.cpp, which has no build for macOS on Intel; a server of your own works everywhere) |
 
 ## License
 

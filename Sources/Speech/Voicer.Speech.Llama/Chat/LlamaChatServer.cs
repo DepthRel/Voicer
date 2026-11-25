@@ -23,8 +23,8 @@ public sealed class LlamaChatServer : LlamaModelServer<ChatModel>
     }
 
     /// <inheritdoc />
-    protected override IReadOnlyList<string> Arguments(string modelFile, ChatModel model, string apiKey)
+    protected override IReadOnlyList<string> Arguments(string modelFile, ChatModel model)
     {
-        return LlamaChatCommandLine.Build(modelFile, model, apiKey);
+        return LlamaChatCommandLine.Build(modelFile, model);
     }
 }

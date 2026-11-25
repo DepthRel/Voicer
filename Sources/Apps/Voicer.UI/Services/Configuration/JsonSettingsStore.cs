@@ -7,7 +7,9 @@ namespace Voicer.UI.Services.Configuration;
 /// <see cref="ISettingsStore"/> backed by a small JSON file, <c>Data/settings.json</c>.
 /// </summary>
 /// <remarks>
-/// A missing or damaged file reads as empty, and the next write replaces it; the file is written atomically.
+/// A missing or damaged file reads as empty, and the next write replaces it; the file is written atomically. A file
+/// that is there but cannot be read now (another program holds it, the access is refused) is never written over: the
+/// change is not kept then, and the other settings stay.
 /// </remarks>
 public sealed class JsonSettingsStore : ISettingsStore
 {
@@ -41,7 +43,7 @@ public sealed class JsonSettingsStore : ISettingsStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        var root = ReadRoot();
+        var root = ReadRoot() ?? [];
 
         return root.TryGetPropertyValue(key, out var node) && node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
     }
@@ -54,7 +56,12 @@ public sealed class JsonSettingsStore : ISettingsStore
 
         lock (_gate)
         {
-            var root = ReadRoot();
+            if (ReadRoot() is not { } root)
+            {
+                // Writing now would replace every other setting with this one.
+                return;
+            }
+
             root[key] = value;
 
             var directory = Path.GetDirectoryName(FilePath)!;
@@ -78,16 +85,34 @@ public sealed class JsonSettingsStore : ISettingsStore
     /// <summary>
     /// Reads the file as a JSON object.
     /// </summary>
-    /// <returns>The object; empty when the file is missing, unreadable or not an object.</returns>
-    private JsonObject ReadRoot()
+    /// <returns>
+    /// The object; empty when the file is missing, damaged or not an object; <see langword="null"/> when it is there
+    /// but cannot be read now.
+    /// </returns>
+    private JsonObject? ReadRoot()
     {
+        if (!File.Exists(FilePath))
+        {
+            return [];
+        }
+
+        string text;
         try
         {
-            return File.Exists(FilePath) && JsonNode.Parse(File.ReadAllText(FilePath)) is JsonObject root ? root : new JsonObject();
+            text = File.ReadAllText(FilePath);
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new JsonObject();
+            return null;
+        }
+
+        try
+        {
+            return JsonNode.Parse(text) is JsonObject root ? root : [];
+        }
+        catch (JsonException)
+        {
+            return [];
         }
     }
 }

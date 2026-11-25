@@ -26,12 +26,6 @@ public sealed class Summarizer : ISummarizer
     private const int INSTRUCTION_TOKENS = 512;
 
     /// <summary>
-    /// How many characters of text a token holds at least: about 2.5 in Russian, 4 in English; the smaller value keeps
-    /// every language inside the context.
-    /// </summary>
-    private const double CHARS_PER_TOKEN = 2.5;
-
-    /// <summary>
     /// How many times notes are joined by groups at most; a model that does not shorten them gives up the rest.
     /// </summary>
     private const int MAX_JOIN_ROUNDS = 3;
@@ -58,15 +52,15 @@ public sealed class Summarizer : ISummarizer
     }
 
     /// <summary>
-    /// Tells how many characters of text fit into one request.
+    /// Tells how many tokens of text fit into one request, by the estimate of <see cref="TokenBudget"/>.
     /// </summary>
     /// <param name="contextTokens">The context of the model, in tokens.</param>
-    /// <returns>The largest part of the text.</returns>
-    public static int PartLength(int contextTokens)
+    /// <returns>The largest part of the text, in tokens.</returns>
+    public static int PartTokens(int contextTokens)
     {
         var tokens = Math.Clamp(contextTokens, SummarySettings.MIN_CONTEXT_TOKENS, SummarySettings.MAX_CONTEXT_TOKENS);
 
-        return (int)((tokens - ANSWER_TOKENS - INSTRUCTION_TOKENS) * CHARS_PER_TOKEN);
+        return tokens - ANSWER_TOKENS - INSTRUCTION_TOKENS;
     }
 
     /// <inheritdoc />
@@ -81,8 +75,8 @@ public sealed class Summarizer : ISummarizer
             throw LocalizedError.Create(m => new InvalidDataException(m), "Summary.NoText");
         }
 
-        var limit = PartLength(settings.ContextTokens);
-        var parts = TextChunker.Split(text, limit);
+        var limit = PartTokens(settings.ContextTokens);
+        var parts = TokenBudget.Split(text, limit);
         if (parts.Count == 1)
         {
             return await FinalAsync(settings, Prompt("Summary.Prompt.Whole", transcript.SourceName, text), 1, 1, progress, cancellationToken);
@@ -115,7 +109,7 @@ public sealed class Summarizer : ISummarizer
 
         // Notes a model would not shorten are cut to the context rather than overflow it.
         var final = string.Join("\n\n", groups);
-        final = final.Length <= limit ? final : final[..limit];
+        final = TokenBudget.Cut(final, limit);
 
         return await FinalAsync(settings, Prompt("Summary.Prompt.Combine", transcript.SourceName, final), steps, steps, progress, cancellationToken);
     }
@@ -168,13 +162,13 @@ public sealed class Summarizer : ISummarizer
     /// Puts notes together, a blank line between them, in as few groups as fit into one request.
     /// </summary>
     /// <param name="notes">The notes, in their order.</param>
-    /// <param name="limit">The largest group, in characters.</param>
+    /// <param name="limit">The largest group, in tokens.</param>
     /// <returns>The groups; one when all the notes fit.</returns>
     private static IReadOnlyList<string> Group(IReadOnlyList<string> notes, int limit)
     {
         var joined = string.Join("\n\n", notes);
 
-        return joined.Length <= limit ? [joined] : TextChunker.Split(joined, limit);
+        return TokenBudget.Estimate(joined) <= limit ? [joined] : TokenBudget.Split(joined, limit);
     }
 
     /// <summary>

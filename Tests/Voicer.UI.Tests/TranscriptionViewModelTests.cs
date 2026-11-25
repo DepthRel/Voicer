@@ -284,11 +284,11 @@ public sealed class TranscriptionViewModelTests
 
         _page.ErrorMessage.Should().Be(TestTexts.English.Get("Summary.NotConfigured"));
         _page.CanFixInSettings.Should().BeTrue();
-        await _summaries.DidNotReceiveWithAnyArgs().SummarizeAsync(default, default!, default, default);
+        await _summaries.DidNotReceiveWithAnyArgs().SummarizeKeptAsync(default, default, default);
     }
 
     /// <summary>
-    /// The summary is written for the kept record, then the record opens with it.
+    /// The summary is written for the kept record, from the text the history keeps, then the record opens with it.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
@@ -302,7 +302,7 @@ public sealed class TranscriptionViewModelTests
 
         await _page.SummarizeCommand.ExecuteAsync(null);
 
-        await _summaries.Received(1).SummarizeAsync(7, transcript, Arg.Any<IProgress<SummaryProgress>?>(), Arg.Any<CancellationToken>());
+        await _summaries.Received(1).SummarizeKeptAsync(7, Arg.Any<IProgress<SummaryProgress>?>(), Arg.Any<CancellationToken>());
         await _viewer.Received(1).OpenAsync(7, Arg.Any<CancellationToken>());
         _page.IsBusy.Should().BeFalse();
         _page.HasError.Should().BeFalse();
@@ -318,7 +318,7 @@ public sealed class TranscriptionViewModelTests
         var transcript = await PrepareRecognitionAsync();
         _keeper.KeepAsync(transcript, Arg.Any<IProgress<double>?>(), Arg.Any<CancellationToken>()).Returns(new KeptRecord(7, true, null));
         _summaries.IsConfigured.Returns(true);
-        _summaries.SummarizeAsync(default, default!, default, default).ReturnsForAnyArgs(Task.FromException<RecordSummary>(new HttpRequestException("refused")));
+        _summaries.SummarizeKeptAsync(default, default, default).ReturnsForAnyArgs(Task.FromException<RecordSummary>(new HttpRequestException("refused")));
         await _page.RecognizeCommand.ExecuteAsync(null);
 
         await _page.SummarizeCommand.ExecuteAsync(null);

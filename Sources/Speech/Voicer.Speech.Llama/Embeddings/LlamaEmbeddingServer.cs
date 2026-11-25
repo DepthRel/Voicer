@@ -31,8 +31,8 @@ public sealed class LlamaEmbeddingServer : LlamaModelServer<EmbeddingModel>
     }
 
     /// <inheritdoc />
-    protected override IReadOnlyList<string> Arguments(string modelFile, EmbeddingModel model, string apiKey)
+    protected override IReadOnlyList<string> Arguments(string modelFile, EmbeddingModel model)
     {
-        return LlamaServerCommandLine.Build(modelFile, model, apiKey);
+        return LlamaServerCommandLine.Build(modelFile, model);
     }
 }

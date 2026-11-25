@@ -4,8 +4,13 @@
     Text to speech with llama.cpp (MIT): the pinned build of llama.cpp the application downloads into the tools folder,
     and the voice of a text spoken by its llama-tts program. Every piece of text runs in a process of its own, started
     without a shell, so the model leaves memory as soon as the piece is spoken and a native failure of a video driver
-    ends only that process.
+    ends only that process. On Windows the processes are put into a job object (bound here), so they end with the
+    application.
   -->
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Voicer.Core\Voicer.Core.csproj" />
     <ProjectReference Include="..\..\Infrastructure\Voicer.Downloads\Voicer.Downloads.csproj" />

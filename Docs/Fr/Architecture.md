@@ -84,8 +84,8 @@ famille, `Data/Models/<family>`, si bien que plusieurs quantifications d'un mêm
 reconnaissance liste chaque fichier téléchargé sous la forme `<nom> <quantification>`. La partie reçue attend dans
 `<file>.part`, de sorte qu'un téléchargement interrompu reprend, et le fichier n'est utilisé qu'une fois sa somme de
 contrôle vérifiée. FFmpeg s'installe de la même façon sous Windows (le build essentials 9.0.2 de Gyan dans
-`Data/Tools/FFmpeg`) ; Linux et macOS utilisent le FFmpeg du système, trouvé dans `PATH` et aux emplacements habituels
-des gestionnaires de paquets.
+`Data/Tools/FFmpeg`) ; sans lui, et sous Linux et macOS, le FFmpeg du système est utilisé, trouvé dans `PATH` et aux
+emplacements habituels des gestionnaires de paquets.
 
 Les réglages gardent les modèles à l'écart : une ligne par catalogue indique combien de modèles sont téléchargés, et
 son bouton ouvre une fenêtre avec une carte par modèle (`ModelCatalogViewModel`, `ModelsWindow`). Un modèle téléchargé
@@ -97,7 +97,9 @@ l'affiche comme un avantage. Les modèles de voix et llama.cpp sont décrits dan
 Chaque texte reconnu va dans la base SQLite du dossier de données, `Data/voicer.db` (`SqliteTranscriptHistory` via
 Microsoft.Data.Sqlite) : une ligne de `records` par reconnaissance (fichier, modèle, périphérique, langue, heure avec
 son décalage UTC, durée, le début du texte) et ses fragments dans `segments`. La version du schéma est conservée dans
-`PRAGMA user_version` ; un fichier d'une version plus récente est refusé. Une entrée sait comment elle a été faite
+`PRAGMA user_version` ; un fichier d'une version plus récente est refusé. Les entrées sont numérotées sans réemploi
+(`AUTOINCREMENT`, version de schéma 7), de sorte qu'une page qui garde encore le numéro d'une entrée supprimée n'ouvre
+ni ne modifie jamais une autre. Une entrée sait comment elle a été faite
 (`kind`, version de schéma 5) : une reconnaissance ou une voix générée ; l'onglet Historique marque ainsi chaque entrée
 et les liste de la plus récente à la plus ancienne ; une entrée s'ouvre dans sa fenêtre, lue depuis la base, et peut
 être supprimée après confirmation. La suppression est physique : `secure_delete` écrase les lignes supprimées et
@@ -142,7 +144,10 @@ modèles sont listés par `GET models`. Le moteur vocal n'est alors plus en mém
 terminé avec la reconnaissance.
 
 `Summarizer` (Core) adapte le texte au contexte : un texte qui tient est résumé en une requête ; un texte plus long est
-découpé par `TextChunker` (lignes, puis phrases, puis mots) en parties d'environ 2,5 caractères par jeton, chaque partie
+découpé par `TextChunker` (lignes, puis phrases, aussi après les points du chinois, du japonais, des écritures de l'Inde
+et de l'arabe, puis mots, puis caractères entiers) en parties qui tiennent selon l'estimation de `TokenBudget` (une
+lettre d'une écriture faite de mots compte pour 0,4 jeton ; un signe du chinois, du japonais, du coréen, du thaï ou
+d'une écriture de l'Inde pour un jeton entier, de sorte qu'un tel texte reçoit des parties plus petites), chaque partie
 donne des notes, et les notes sont réunies en résumé (d'abord par groupes quand elles sont trop longues ensemble, trois
 tours au plus). Les instructions viennent du pack de langue (`Summary.Prompt.*`), de sorte que le résumé est dans la
 langue de l'interface. `ReasoningFilter` retire le `<think>…</think>` des modèles qui raisonnent.
@@ -175,11 +180,15 @@ est conservée, ses fragments sont regroupés en passages d'environ 600 caractè
 (`PassageBuilder`) : l'unité que trouve la recherche, que lit le modèle et vers laquelle saute le lecteur (version de
 schéma 4 : `passages` ; les entrées conservées avant sont indexées lors de la mise à niveau).
 
-- **Par mots** : l'index FTS5 `passages_fts` (`unicode61`, diacritiques supprimés, classé par BM25). `FullTextQuery`
-  transforme ce que l'utilisateur a tapé en requête sûre : les mots entre guillemets forment une expression ; les
-  autres mots sont cherchés par leur début sans la ou les deux dernières lettres, de sorte que d'autres formes
-  correspondent (*договоров* trouve *договор*) ; n'importe quel mot suffit, et davantage de mots classent plus haut.
-  Seuls les lettres et les chiffres atteignent l'index.
+- **Par mots** : l'index FTS5 `passages_fts` (`unicode61`, diacritiques supprimés, classé par BM25). Un mot se
+  compose de lettres, de nombres et des signes joints aux lettres (`categories 'L* N* Co M*'`, version de schéma 7),
+  de sorte qu'un mot en hindi, en bengali ou en thaï reste entier. `FullTextQuery` transforme ce que l'utilisateur a
+  tapé en requête sûre : les mots entre guillemets forment une expression ; les autres mots sont cherchés par leur
+  début sans la ou les deux dernières lettres, de sorte que d'autres formes correspondent (*contracts* trouve
+  *contract* et *contracted*) ; un mot avec un chiffre est cherché entier ; n'importe quel mot suffit, et davantage de
+  mots classent plus haut. Seuls les caractères des mots atteignent l'index. Le chinois et le japonais s'écrivent sans
+  espaces, donc l'index prend toute une suite de leurs signes pour un seul mot : un tel texte n'est trouvé que par son
+  début, et mieux par le sens.
 - **Par le sens** : un modèle d'embeddings sur le même serveur (`POST embeddings`), choisi dans les réglages à côté du
   modèle des résumés ; un modèle multilingue (bge-m3, multilingual-e5) pour une parole qui n'est pas en anglais. Avant
   une recherche, chaque passage sans vecteur de ce modèle en reçoit un, seize par requête (l'indexation est affichée) ;
@@ -191,6 +200,11 @@ schéma 4 : `passages` ; les entrées conservées avant sont indexées lors de l
   build figé (`LlamaEmbeddingServer`) : sur 127.0.0.1 seulement, sur un port libre, avec une clé aléatoire ; lancé par
   la première recherche, retenu par chaque requête, arrêté après cinq minutes sans requête, par l'arrêt dans les
   réglages et avec l'application. Les réglages montrent son état, la mémoire et la part du processeur de son processus.
+  La clé d'un serveur de Voicer est donnée dans son environnement (`LLAMA_API_KEY`), jamais parmi ses arguments, que
+  tout utilisateur de l'ordinateur peut lire. Sous Windows, chaque processus de llama.cpp est placé dans un objet de
+  tâche (job object) que le système termine avec l'application, quelle que soit sa fin ; chaque serveur est aussi noté
+  dans `Data/Temp/Servers` (`ServerProcessRegistry`), de sorte que le lancement suivant termine sous Linux et macOS un
+  serveur laissé par une exécution qui a échoué.
   La section « Modèles de la recherche dans l'historique » des réglages garde un seul choix de la source (`ModelSource`, gardé sous
   `search.source`) : désactivée, un modèle de Voicer ou un modèle d'embeddings du serveur ; un choix qui n'est pas
   encore prêt (modèle non téléchargé, llama.cpp absent, aucun modèle du serveur choisi) cherche par mots et dit
@@ -255,6 +269,12 @@ qu'une série d'enregistrements garde une même voix.
 `AppPaths` choisit le dossier des données : `--data <folder>` ; sinon `Data` à côté du marqueur `voicer.portable` d'un
 paquet ; sinon `Data` à côté du programme ; et quand ce dossier n'est pas accessible en écriture (Program Files,
 `/opt`), le profil de l'utilisateur (`%LOCALAPPDATA%\Voicer\Data`, `~/.local/share/Voicer/Data`).
+
+La première fenêtre sur un dossier des données garde son fichier de verrou, `Data/voicer.lock` (`DataFolderLock`) ;
+seule cette fenêtre nettoie ce que les exécutions précédentes ont laissé dans `Data/Temp`, de sorte qu'une deuxième
+fenêtre ne supprime pas les fichiers de son avec lesquels travaille la première. Le fichier des réglages est remplacé
+de façon atomique à chaque changement ; un fichier illisible sur le moment (un autre programme le garde) n'est pas
+écrasé, de sorte qu'un changement n'efface jamais les autres réglages.
 
 Un échec de la fenêtre que rien ne prévoyait ne met pas fin à l'application : `App` l'intercepte sur le dispatcher,
 l'écrit dans `Data/errors.log` (`ErrorLog` : le moment, le type, le message et la pile ; le fichier recommence au-delà

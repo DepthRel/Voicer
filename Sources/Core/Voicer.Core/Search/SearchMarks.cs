@@ -1,3 +1,4 @@
+using System.Text;
 using Voicer.Core.Transcripts;
 
 namespace Voicer.Core.Search;
@@ -32,9 +33,18 @@ public static class SearchMarks
         }
 
         var start = -1;
-        for (var i = 0; i <= text.Length; i++)
+        var length = 1;
+        for (var i = 0; i <= text.Length; i += length)
         {
-            var inWord = i < text.Length && char.IsLetterOrDigit(text[i]);
+            // A word is read by whole characters, as the index reads it: a pair of surrogates and a mark belong to it.
+            var inWord = false;
+            length = 1;
+            if (i < text.Length)
+            {
+                Rune.DecodeFromUtf16(text.AsSpan(i), out var character, out length);
+                inWord = WordCharacters.Contains(character);
+            }
+
             if (inWord && start < 0)
             {
                 start = i;

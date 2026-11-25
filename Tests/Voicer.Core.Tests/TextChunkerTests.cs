@@ -54,4 +54,30 @@ public sealed class TextChunkerTests
         TextChunker.Split("\n\n  \nText.\n\n", 50).Should().Equal("Text.");
         TextChunker.Split(string.Empty, 50).Should().BeEmpty();
     }
+
+    /// <summary>
+    /// The stops of scripts written without a space after them end sentences too: a Chinese line and a Hindi line are
+    /// cut after their sentences, not in the middle of one.
+    /// </summary>
+    [Fact]
+    public void Split_CutsAfterTheStopsOfOtherScripts()
+    {
+        TextChunker.Split("今天天气很好。我们去公园吧！你来吗？", 8).Should().Equal("今天天气很好。", "我们去公园吧！", "你来吗？");
+        TextChunker.Split("यह पहला वाक्य है। यह दूसरा है।", 18).Should().Equal("यह पहला वाक्य है।", "यह दूसरा है।");
+    }
+
+    /// <summary>
+    /// A run without spaces is cut between whole characters: a pair of surrogates or a letter with its marks is kept.
+    /// </summary>
+    [Fact]
+    public void Split_NeverCutsACharacter()
+    {
+        var text = string.Concat(Enumerable.Repeat("𠀀", 5)) + string.Concat(Enumerable.Repeat("क्षि", 3));
+
+        var parts = TextChunker.Split(text, 3);
+
+        string.Concat(parts).Should().Be(text);
+        parts.Should().OnlyContain(p => !char.IsHighSurrogate(p[p.Length - 1]) && !char.IsLowSurrogate(p[0]));
+        parts.Should().OnlyContain(p => p.Length <= 4);
+    }
 }

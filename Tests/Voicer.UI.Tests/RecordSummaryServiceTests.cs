@@ -99,6 +99,40 @@ public sealed class RecordSummaryServiceTests
     }
 
     /// <summary>
+    /// A kept record is summarized from the text the history gives, the one with the corrections of the user.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task SummarizeKept_TakesTheTextOfTheHistory()
+    {
+        var corrected = _transcript with { Segments = [new TranscriptSegment(TimeSpan.Zero, TimeSpan.FromSeconds(1), "Corrected.")] };
+        LanguageModelEndpoint.TryCreate("http://localhost:1234/v1", string.Empty, out var endpoint);
+        _chat.OpenAsync(default).ReturnsForAnyArgs(_ => new ChatSession(new SummarySettings(endpoint!, "qwen3-8b", 16384), lease: new Release(() => _ended++)));
+        _summarizer.SummarizeAsync(default!, default!, default, default).ReturnsForAnyArgs("- point");
+        _history.FindAsync(5, Arg.Any<CancellationToken>()).Returns(corrected);
+        _history.SaveSummaryAsync(default, default!, default).ReturnsForAnyArgs(true);
+
+        await _service.SummarizeKeptAsync(5, null, CancellationToken.None);
+
+        await _summarizer.Received(1).SummarizeAsync(corrected, Arg.Any<SummarySettings>(), null, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// A record deleted meanwhile is not summarized: the failure says it is gone.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task SummarizeKept_OfAMissingRecord_Fails()
+    {
+        _history.FindAsync(5, Arg.Any<CancellationToken>()).Returns((Transcript?)null);
+
+        var act = () => _service.SummarizeKeptAsync(5, null, CancellationToken.None);
+
+        await act.Should().ThrowAsync<IOException>();
+        await _summarizer.DidNotReceiveWithAnyArgs().SummarizeAsync(default!, default!, default, default);
+    }
+
+    /// <summary>
     /// Gives a lease back by calling an action.
     /// </summary>
     /// <param name="release">The action.</param>

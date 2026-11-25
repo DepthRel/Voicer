@@ -80,8 +80,9 @@ large-v3 has no Q8. Every file is pinned by size and SHA-256. The settings show 
 quantization; a file is downloaded into the folder of its family, `Data/Models/<family>`, so several quantizations of
 one model live side by side, and the recognition lists every downloaded file as `<name> <quantization>`. The received
 part waits in `<file>.part`, so an interrupted download continues, and the file is used only after its checksum
-matches. FFmpeg is installed the same way on Windows (the Gyan 9.0.2 essentials build into `Data/Tools/FFmpeg`); Linux
-and macOS use the FFmpeg of the system, found on `PATH` and in the usual places of the package managers.
+matches. FFmpeg is installed the same way on Windows (the Gyan 9.0.2 essentials build into `Data/Tools/FFmpeg`);
+without it, and on Linux and macOS, the FFmpeg of the system is used, found on `PATH` and in the usual places of the
+package managers.
 
 The settings keep the models out of the way: a line per catalog tells how many models are downloaded, and its button
 opens a window with a card per model (`ModelCatalogViewModel`, `ModelsWindow`). A downloaded model has a lit card
@@ -93,7 +94,9 @@ advantage. The voice models and llama.cpp are described in [Voice generation](#v
 Every recognized text goes into the SQLite database of the data folder, `Data/voicer.db` (`SqliteTranscriptHistory`
 through Microsoft.Data.Sqlite): a row of `records` per recognition (file, model, device, language, time with its UTC
 offset, duration, the beginning of the text) and its fragments in `segments`. The schema version is kept in
-`PRAGMA user_version`; a file of a newer version is refused. A record knows how it was made (`kind`, schema version
+`PRAGMA user_version`; a file of a newer version is refused. The records are numbered without reuse (`AUTOINCREMENT`,
+schema version 7), so a page that still holds the number of a deleted record never opens or changes another one. A
+record knows how it was made (`kind`, schema version
 5): a recognition or a generated speech; the History tab marks every record so and lists them the newest first; a
 record opens in its window, read from the database, and can be deleted after a confirmation. A deletion is physical:
 `secure_delete` overwrites the deleted rows and `auto_vacuum = INCREMENTAL` gives the freed pages back to the file
@@ -135,7 +138,10 @@ context it is loaded with (`summary.*` in `Data/settings.json`); the models are 
 engine is not in memory by then: its worker ended with the recognition.
 
 `Summarizer` (Core) fits the text to the context: a text that fits is summarized in one request; a longer one is cut by
-`TextChunker` (lines, then sentences, then words) into parts of about 2.5 characters a token, every part gives notes,
+`TextChunker` (lines, then sentences, also after the stops of Chinese, Japanese, the scripts of India and Arabic, then
+words, then whole characters) into parts that fit by the estimate of `TokenBudget` (a letter of a script written in
+words counts as 0.4 of a token; a sign of Chinese, Japanese, Korean, Thai or a script of India as a whole token, so
+such a text gets smaller parts), every part gives notes,
 and the notes are joined into the summary (joined by groups first when they are too long together, at most three
 rounds). The instructions come from the language pack (`Summary.Prompt.*`), so the summary is in the language of the
 interface. `ReasoningFilter` removes the `<think>…</think>` of thinking models. `OpenAiCompatibleClient` streams the
@@ -166,10 +172,14 @@ fragments are put together into passages of about 600 characters with their mome
 search finds, the model reads and the player jumps to (schema version 4: `passages`, records kept before are
 indexed by the upgrade).
 
-- **By words**: the FTS5 index `passages_fts` (`unicode61`, diacritics folded, ranked by BM25). `FullTextQuery` turns
-  what the user typed into a safe query: words in quotes form a phrase; the other words are looked up by their
-  beginning without the last one or two letters, so other forms match (*договоров* finds *договор*); any word is
-  enough, more of them rank higher. Only letters and digits reach the index.
+- **By words**: the FTS5 index `passages_fts` (`unicode61`, diacritics folded, ranked by BM25). A word is made of
+  letters, numbers and the marks joined to letters (`categories 'L* N* Co M*'`, schema version 7), so a word of Hindi,
+  Bengali or Thai stays whole. `FullTextQuery` turns what the user typed into a safe query: words in quotes form a
+  phrase; the other words are looked up by their beginning without the last one or two letters, so other forms match
+  (*contracts* finds *contract* and *contracted*); a word with a digit is looked up whole; any word is enough, more of
+  them rank higher. Only the characters of words reach the index. Chinese and Japanese are written without spaces, so
+  the index takes a whole run of their signs as one word: such a text is found by its beginning only, and better by
+  meaning.
 - **By meaning**: a model of embeddings on the same server (`POST embeddings`), chosen in the settings next to the
   model of summaries; a multilingual one (bge-m3, multilingual-e5) for speech that is not English. Before a search,
   every passage without a vector of that model gets one, sixteen per request (the indexing is shown); the vectors are
@@ -181,6 +191,10 @@ indexed by the upgrade).
   pinned build (`LlamaEmbeddingServer`): on 127.0.0.1 only, on a free port, with a random key; started by the first
   search, held by a lease for every request, ended after five minutes without requests, on a stop in the settings and
   with the application. The settings show its state, the memory and the share of the processor of its process.
+  The key of a server of Voicer is given in its environment (`LLAMA_API_KEY`), never among its arguments, which every
+  user of the computer can read. On Windows every process of llama.cpp is put into a job object that the system ends
+  with the application, however it ends; every server is also noted in `Data/Temp/Servers` (`ServerProcessRegistry`),
+  so the next start ends a server that a failed run left behind on Linux and macOS.
   The section "Models of the history search" of the settings holds one choice of the source (`ModelSource`, kept as
   `search.source`): off, a model of Voicer, or a model of embeddings of the server; a choice that is not ready (the
   model is not downloaded, llama.cpp is missing, no model of the server is chosen) searches by words and says why.
@@ -244,6 +258,11 @@ one voice.
 `AppPaths` chooses the data folder: `--data <folder>`; otherwise `Data` next to the `voicer.portable` marker of a
 package; otherwise `Data` next to the program; and when that folder is not writable (Program Files, `/opt`), the
 profile of the user (`%LOCALAPPDATA%\Voicer\Data`, `~/.local/share/Voicer/Data`).
+
+The first window over a data folder holds its lock file, `Data/voicer.lock` (`DataFolderLock`); only that window clears
+what earlier runs left in `Data/Temp`, so a second window does not delete the sound files the first one works with.
+The settings file is replaced atomically on every change; a file that cannot be read at the moment (another program
+holds it) is not written over, so one change never wipes the other settings.
 
 A failure of the window that nothing expected does not end the application: `App` catches it on the dispatcher, writes
 it to `Data/errors.log` (`ErrorLog`: the moment, the type, the message and the stack; the file starts again past

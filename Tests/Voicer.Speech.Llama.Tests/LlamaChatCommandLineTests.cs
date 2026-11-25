@@ -10,21 +10,21 @@ namespace Voicer.Speech.Llama.Tests;
 public sealed class LlamaChatCommandLineTests
 {
     /// <summary>
-    /// The server listens on this computer only, on a free port, with its key, one request at a time in the context of
-    /// the model, and never makes vectors.
+    /// The server listens on this computer only, on a free port, one request at a time in the context of
+    /// the model, and never makes vectors; its key is not among the arguments, which every user can read.
     /// </summary>
     [Fact]
     public void Build_ServesTheModelOnThisComputerOnly()
     {
         var model = Model(thinks: false);
 
-        var arguments = LlamaChatCommandLine.Build("model.gguf", model, "secret");
+        var arguments = LlamaChatCommandLine.Build("model.gguf", model);
 
         arguments.Should().ContainInConsecutiveOrder("-m", "model.gguf");
         arguments.Should().ContainInConsecutiveOrder("--alias", "tiny-chat");
         arguments.Should().ContainInConsecutiveOrder("--host", "127.0.0.1");
         arguments.Should().ContainInConsecutiveOrder("--port", "0");
-        arguments.Should().ContainInConsecutiveOrder("--api-key", "secret");
+        arguments.Should().NotContain("--api-key");
         arguments.Should().ContainInConsecutiveOrder("--parallel", "1");
         arguments.Should().ContainInConsecutiveOrder("--ctx-size", "4096");
         arguments.Should().Contain("--no-webui");
@@ -38,7 +38,7 @@ public sealed class LlamaChatCommandLineTests
     [Fact]
     public void Build_TellsAThinkingModelNotToReason()
     {
-        var arguments = LlamaChatCommandLine.Build("model.gguf", Model(thinks: true), "secret");
+        var arguments = LlamaChatCommandLine.Build("model.gguf", Model(thinks: true));
 
         arguments.Should().ContainInConsecutiveOrder("--reasoning-budget", "0");
     }

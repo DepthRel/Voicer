@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Voicer.Core.Corrections;
 using Voicer.Core.Enums;
 using Voicer.Core.History;
+using Voicer.Core.Text;
 using Voicer.Core.Transcripts;
 
 namespace Voicer.Storage;
@@ -386,6 +387,6 @@ public sealed class SqliteTranscriptHistory : ITranscriptHistory
     {
         var line = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-        return line.Length <= PREVIEW_LENGTH ? line : line[..PREVIEW_LENGTH].TrimEnd() + "…";
+        return line.Length <= PREVIEW_LENGTH ? line : TextCut.Beginning(line, PREVIEW_LENGTH).TrimEnd() + "…";
     }
 }

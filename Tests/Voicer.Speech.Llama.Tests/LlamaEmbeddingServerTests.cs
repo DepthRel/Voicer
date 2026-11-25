@@ -73,6 +73,11 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
     private IReadOnlyList<string> _arguments = [];
 
     /// <summary>
+    /// The key given to the last start, apart from its arguments.
+    /// </summary>
+    private string? _apiKey;
+
+    /// <summary>
     /// Tells a ready line, as the server under test gave it to the last start.
     /// </summary>
     private Func<string, bool> _isReady = _ => false;
@@ -95,10 +100,11 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
         _locator.LocateServer().Returns(PROGRAM);
         _store.IsInstalled(Arg.Any<EmbeddingModel>()).Returns(true);
         _store.FileOf(Arg.Any<EmbeddingModel>()).Returns(call => "models/" + call.Arg<EmbeddingModel>().FileName);
-        _launcher.Start(default!, default!, default!).ReturnsForAnyArgs(call =>
+        _launcher.Start(default!, default!, default!, default!).ReturnsForAnyArgs(call =>
         {
             _arguments = call.ArgAt<IReadOnlyList<string>>(1);
-            _isReady = call.ArgAt<Func<string, bool>>(2);
+            _apiKey = call.ArgAt<string>(2);
+            _isReady = call.ArgAt<Func<string, bool>>(3);
             var process = _next();
             _started.Add(process);
 
@@ -117,7 +123,8 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
 
     /// <summary>
     /// The first search starts the server with the model, only on this computer, on a free port, with a key of its own
-    /// and without a web page, and learns its address from the line that says it listens.
+    /// given apart from the arguments every user can read, and without a web page, and learns its address from the line
+    /// that says it listens.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
     [Fact]
@@ -127,12 +134,13 @@ public sealed class LlamaEmbeddingServerTests : IDisposable
 
         endpoint.BaseAddress.AbsoluteUri.Should().Be("http://127.0.0.1:54230/v1");
         endpoint.ApiKey.Should().MatchRegex("^[0-9a-f]{64}$");
-        _launcher.Received(1).Start(PROGRAM, Arg.Any<IReadOnlyList<string>>(), Arg.Any<Func<string, bool>>());
+        _launcher.Received(1).Start(PROGRAM, Arg.Any<IReadOnlyList<string>>(), Arg.Any<string>(), Arg.Any<Func<string, bool>>());
         _arguments.Should().ContainInConsecutiveOrder("-m", "models/" + _model.FileName);
         _arguments.Should().ContainInConsecutiveOrder("--alias", _model.Id);
         _arguments.Should().ContainInConsecutiveOrder("--host", "127.0.0.1");
         _arguments.Should().ContainInConsecutiveOrder("--port", "0");
-        _arguments.Should().ContainInConsecutiveOrder("--api-key", endpoint.ApiKey!);
+        _apiKey.Should().Be(endpoint.ApiKey);
+        _arguments.Should().NotContain("--api-key");
         _arguments.Should().Contain(["--embedding", "--no-webui"]);
         _arguments.Should().ContainInConsecutiveOrder("--ubatch-size", "2048");
         _isReady(READY_LINE).Should().BeTrue();

@@ -94,6 +94,22 @@ public sealed class SqliteSearchIndexTests : IDisposable
     }
 
     /// <summary>
+    /// A word of a script with marks joined to its letters is indexed whole: a word of Hindi finds its passage, and
+    /// words that only share its letters without their marks are not found.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Words_WithMarks_AreIndexedWhole()
+    {
+        await _history.AddAsync(Talk("hindi.mp4", "मुझे हिंदी पसंद है।"), null, CancellationToken.None);
+        await _history.AddAsync(Talk("other.mp4", "हाँ दादा आए।"), null, CancellationToken.None);
+
+        var hits = await _index.SearchWordsAsync(FullTextQuery.Build("हिंदी")!, 10, CancellationToken.None);
+
+        hits.Select(h => h.SourceName).Should().Equal("hindi.mp4");
+    }
+
+    /// <summary>
     /// Every passage needs a vector of a model until it is given one; the closest vectors come first.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>

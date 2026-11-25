@@ -82,8 +82,8 @@ escolha de quantização; um ficheiro é transferido para a pasta da sua famíli
 quantizações de um modelo convivem lado a lado, e o reconhecimento lista cada ficheiro transferido como
 `<nome> <quantização>`. A parte recebida espera em `<file>.part`, por isso uma transferência interrompida continua, e
 o ficheiro só é usado depois de a sua soma de verificação coincidir. O FFmpeg é instalado da mesma forma no Windows (a
-build essentials 9.0.2 da Gyan em `Data/Tools/FFmpeg`); Linux e macOS usam o FFmpeg do sistema, encontrado no `PATH` e
-nos locais habituais dos gestores de pacotes.
+build essentials 9.0.2 da Gyan em `Data/Tools/FFmpeg`); sem ela, e no Linux e no macOS, é usado o FFmpeg do sistema,
+encontrado no `PATH` e nos locais habituais dos gestores de pacotes.
 
 As definições mantêm os modelos fora do caminho: uma linha por catálogo diz quantos modelos estão transferidos, e o
 seu botão abre uma janela com um cartão por modelo (`ModelCatalogViewModel`, `ModelsWindow`). Um modelo transferido
@@ -96,7 +96,8 @@ Cada texto reconhecido vai para a base de dados SQLite da pasta de dados, `Data/
 (`SqliteTranscriptHistory` através do Microsoft.Data.Sqlite): uma linha de `records` por reconhecimento (ficheiro,
 modelo, dispositivo, idioma, hora com o seu desvio UTC, duração, o início do texto) e os seus fragmentos em
 `segments`. A versão do esquema é guardada em `PRAGMA user_version`; um ficheiro de uma versão mais recente é
-recusado. Um registo sabe como foi feito (`kind`, versão de esquema 5): um reconhecimento ou uma fala gerada; o
+recusado. Os registos são numerados sem reutilizar números (`AUTOINCREMENT`, versão de esquema 7), por isso uma página
+que ainda guarda o número de um registo apagado nunca abre nem altera outro. Um registo sabe como foi feito (`kind`, versão de esquema 5): um reconhecimento ou uma fala gerada; o
 separador Histórico marca assim cada registo e lista-os do mais recente para o mais antigo; um registo abre-se na sua
 janela, lido da base de dados, e pode ser eliminado após uma confirmação. A eliminação é física: `secure_delete`
 sobrescreve as linhas eliminadas e `auto_vacuum = INCREMENTAL` devolve as páginas libertadas ao sistema de ficheiros,
@@ -140,8 +141,10 @@ por `GET models`. Nessa altura o motor de fala já não está em memória: o seu
 reconhecimento.
 
 `Summarizer` (Core) ajusta o texto ao contexto: um texto que cabe é resumido num pedido; um mais longo é cortado por
-`TextChunker` (linhas, depois frases, depois palavras) em partes de cerca de 2,5 caracteres por token, cada parte dá
-notas, e as notas são juntas no resumo (primeiro por grupos quando juntas são demasiado longas, no máximo três
+`TextChunker` (linhas, depois frases, também após os sinais finais do chinês, do japonês, das escritas da Índia e do
+árabe, depois palavras, depois carateres inteiros) em partes que cabem segundo a estimativa de `TokenBudget` (uma letra
+de uma escrita com palavras conta como 0,4 de token; um sinal do chinês, do japonês, do coreano, do tailandês ou de
+uma escrita da Índia, como um token inteiro, por isso esse texto recebe partes mais pequenas), cada parte dá notas, e as notas são juntas no resumo (primeiro por grupos quando juntas são demasiado longas, no máximo três
 rondas). As instruções vêm do pacote de idioma (`Summary.Prompt.*`), por isso o resumo está no idioma da interface.
 `ReasoningFilter` retira o `<think>…</think>` dos modelos que raciocinam. `OpenAiCompatibleClient` recebe a resposta
 em streaming (`stream: true`, server-sent events; um servidor que responde de uma vez também é compreendido) e descreve
@@ -173,11 +176,15 @@ guardado, os seus fragmentos são agrupados em excertos de cerca de 600 caracter
 (`PassageBuilder`): a unidade que a pesquisa encontra, que o modelo lê e para a qual o leitor salta (versão de esquema
 4: `passages`; os registos guardados antes são indexados na atualização).
 
-- **Por palavras**: o índice FTS5 `passages_fts` (`unicode61`, sem diacríticos, ordenado por BM25). `FullTextQuery`
-  transforma o que o utilizador escreveu numa consulta segura: as palavras entre aspas formam uma frase; as outras são
-  procuradas pelo seu início sem a última ou as duas últimas letras, por isso outras formas coincidem (*договоров*
-  encontra *договор*); qualquer palavra basta, e mais palavras sobem na ordenação. Só letras e dígitos chegam ao
-  índice.
+- **Por palavras**: o índice FTS5 `passages_fts` (`unicode61`, sem diacríticos, ordenado por BM25). Uma palavra é
+  feita de letras, números e dos sinais unidos às letras (`categories 'L* N* Co M*'`, versão de esquema 7), por isso
+  uma palavra em hindi, bengali ou tailandês fica inteira. `FullTextQuery` transforma o que o utilizador escreveu numa
+  consulta segura: as palavras entre aspas formam uma frase; as outras são procuradas pelo seu início sem a última ou
+  as duas últimas letras, por isso outras formas coincidem (*contracts* encontra *contract* e *contracted*); uma
+  palavra com um dígito é procurada inteira; qualquer palavra basta, e mais palavras sobem na ordenação. Só os
+  carateres das palavras chegam ao índice. O chinês e o japonês escrevem-se sem espaços, por isso o índice toma uma
+  sequência inteira dos seus sinais como uma palavra: esse texto só é encontrado pelo seu início, e melhor pelo
+  significado.
 - **Por significado**: um modelo de embeddings no mesmo servidor (`POST embeddings`), escolhido nas definições ao lado
   do modelo dos resumos; um multilingue (bge-m3, multilingual-e5) para fala que não seja em inglês. Antes de uma
   pesquisa, cada excerto sem vetor desse modelo recebe um, dezasseis por pedido (a indexação é mostrada); os vetores
@@ -189,6 +196,11 @@ guardado, os seus fragmentos são agrupados em excertos de cerca de 600 caracter
   build fixada (`LlamaEmbeddingServer`): só em 127.0.0.1, numa porta livre, com uma chave aleatória; iniciado pela
   primeira pesquisa, retido por cada pedido, parado após cinco minutos sem pedidos, ao pará-lo nas definições e com a
   aplicação. As definições mostram o seu estado, a memória e a parte do processador do seu processo.
+  A chave de um servidor do Voicer é dada no seu ambiente (`LLAMA_API_KEY`), nunca entre os seus argumentos, que
+  qualquer utilizador do computador pode ler. No Windows cada processo do llama.cpp entra num objeto de tarefa (job
+  object) que o sistema termina com a aplicação, seja como for que ela termine; cada servidor é também anotado em
+  `Data/Temp/Servers` (`ServerProcessRegistry`), por isso o arranque seguinte termina no Linux e no macOS um servidor
+  deixado por uma execução que falhou.
   A secção «Modelos da pesquisa no histórico» das definições guarda uma única escolha da fonte (`ModelSource`, guardada como
   `search.source`): desligada, um modelo do Voicer ou um modelo de embeddings do servidor; uma escolha que ainda não
   está pronta (modelo não transferido, falta o llama.cpp, nenhum modelo do servidor escolhido) pesquisa por palavras e
@@ -253,6 +265,12 @@ mantém uma mesma voz.
 `AppPaths` escolhe a pasta de dados: `--data <folder>`; senão, `Data` ao lado do marcador `voicer.portable` de um
 pacote; senão, `Data` ao lado do programa; e quando essa pasta não permite escrita (Program Files, `/opt`), o perfil do
 utilizador (`%LOCALAPPDATA%\Voicer\Data`, `~/.local/share/Voicer/Data`).
+
+A primeira janela sobre uma pasta de dados retém o seu ficheiro de bloqueio, `Data/voicer.lock` (`DataFolderLock`); só
+essa janela limpa o que execuções anteriores deixaram em `Data/Temp`, por isso uma segunda janela não apaga os
+ficheiros de som com que a primeira trabalha. O ficheiro das definições é substituído de forma atómica a cada
+alteração; um ficheiro que não pode ser lido nesse momento (outro programa retém-no) não é escrito por cima, por isso
+uma alteração nunca apaga as outras definições.
 
 Uma falha da janela que nada previa não termina a aplicação: `App` apanha-a no dispatcher, escreve-a em
 `Data/errors.log` (`ErrorLog`: o momento, o tipo, a mensagem e a pilha; o ficheiro recomeça depois de 1 MB) e mostra

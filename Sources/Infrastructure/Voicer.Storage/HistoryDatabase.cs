@@ -17,7 +17,7 @@ internal sealed class HistoryDatabase
     /// <summary>
     /// The version of the schema this build writes; it is kept in <c>PRAGMA user_version</c>.
     /// </summary>
-    internal const int SCHEMA_VERSION = 6;
+    internal const int SCHEMA_VERSION = 7;
 
     /// <summary>
     /// The schema of version 1: the records of the history and the fragments of their texts.
@@ -124,6 +124,40 @@ internal sealed class HistoryDatabase
             PRIMARY KEY (record_id, segment, start)
         ) WITHOUT ROWID;
         PRAGMA user_version = 6;
+        """;
+
+    /// <summary>
+    /// The schema of version 7: the records are numbered without reuse, so the number of a deleted record never names a
+    /// new one that a page still holding the old number would then change or open. SQLite cannot add
+    /// <c>AUTOINCREMENT</c> to a table, so the table is built anew with its rows and its index; the tables that point at
+    /// it keep their rows, because the foreign keys are off while it is rebuilt. The full-text index is built anew too,
+    /// with the marks joined to letters (<c>M*</c>) counted as parts of words: without them a word of Hindi, Bengali or
+    /// Thai fell apart into single letters. It goes after the rename, which checks the trigger that names it.
+    /// </summary>
+    private const string SCHEMA_V7 = """
+        CREATE TABLE records_v7 (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_path TEXT NOT NULL,
+            source_name TEXT NOT NULL,
+            model TEXT NOT NULL,
+            device TEXT NOT NULL,
+            language TEXT NULL,
+            created_at_ms INTEGER NOT NULL,
+            utc_offset_min INTEGER NOT NULL,
+            duration_ms INTEGER NOT NULL,
+            preview TEXT NOT NULL,
+            kind INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO records_v7 (id, source_path, source_name, model, device, language, created_at_ms, utc_offset_min, duration_ms, preview, kind)
+            SELECT id, source_path, source_name, model, device, language, created_at_ms, utc_offset_min, duration_ms, preview, kind FROM records;
+        DROP TABLE records;
+        ALTER TABLE records_v7 RENAME TO records;
+        CREATE INDEX records_by_time ON records (created_at_ms DESC, id DESC);
+        DROP TABLE passages_fts;
+        CREATE VIRTUAL TABLE passages_fts USING fts5(text, tokenize = "unicode61 remove_diacritics 2 categories 'L* N* Co M*'");
+        INSERT INTO passages_fts (passages_fts, rank) VALUES ('secure-delete', 1);
+        INSERT INTO passages_fts (rowid, text) SELECT id, text FROM passages;
+        PRAGMA user_version = 7;
         """;
 
     /// <summary>
@@ -308,6 +342,11 @@ internal sealed class HistoryDatabase
                 Upgrade(connection, SCHEMA_V6);
             }
 
+            if (version < 7)
+            {
+                UpgradeWithoutForeignKeys(connection, SCHEMA_V7);
+            }
+
             _schemaReady = true;
         }
     }
@@ -340,6 +379,26 @@ internal sealed class HistoryDatabase
 
         Execute(connection, "PRAGMA user_version = 4;", transaction);
         transaction.Commit();
+    }
+
+    /// <summary>
+    /// Applies a step that rebuilds a table other tables point at: the foreign keys are off while it runs, so the rows
+    /// that point at the old table are neither deleted nor refused, and on again after it.
+    /// </summary>
+    /// <param name="connection">An open connection.</param>
+    /// <param name="schema">The SQL of the step; it sets the new version.</param>
+    private static void UpgradeWithoutForeignKeys(SqliteConnection connection, string schema)
+    {
+        // The switch has no effect inside a transaction, so it wraps the transaction of the step.
+        Execute(connection, "PRAGMA foreign_keys = OFF;");
+        try
+        {
+            Upgrade(connection, schema);
+        }
+        finally
+        {
+            Execute(connection, "PRAGMA foreign_keys = ON;");
+        }
     }
 
     /// <summary>

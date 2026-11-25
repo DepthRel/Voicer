@@ -74,7 +74,6 @@ public sealed class ProcessWorkerClient : IWorkerClient
             command = [.. command, WorkerProtocol.DETECTOR_OPTION, Path.GetFullPath(detectorPath)];
         }
 
-
         await RunAsync(
             command,
             e =>

@@ -84,8 +84,8 @@ in den Ordner ihrer Familie heruntergeladen, `Data/Models/<family>`, sodass mehr
 nebeneinander liegen, und die Erkennung listet jede heruntergeladene Datei als `<Name> <Quantisierung>`. Der
 empfangene Teil wartet in `<file>.part`, sodass ein unterbrochener Download fortgesetzt wird, und die Datei wird erst
 verwendet, wenn ihre Prüfsumme stimmt. FFmpeg wird unter Windows genauso installiert (der Gyan-Build 9.0.2 essentials
-nach `Data/Tools/FFmpeg`); Linux und macOS verwenden das FFmpeg des Systems, gefunden über `PATH` und an den üblichen
-Orten der Paketverwaltungen.
+nach `Data/Tools/FFmpeg`); ohne ihn, und unter Linux und macOS, wird das FFmpeg des Systems verwendet, gefunden über
+`PATH` und an den üblichen Orten der Paketverwaltungen.
 
 Die Einstellungen halten die Modelle aus dem Weg: Eine Zeile pro Katalog sagt, wie viele Modelle heruntergeladen sind,
 und ihr Knopf öffnet ein Fenster mit einer Karte pro Modell (`ModelCatalogViewModel`, `ModelsWindow`). Ein
@@ -98,7 +98,9 @@ dem Prozessor gut läuft (Whisper Small, Kokoro), trägt das als Vorteil. Die Sp
 Jeder erkannte Text kommt in die SQLite-Datenbank des Datenordners, `Data/voicer.db` (`SqliteTranscriptHistory` über
 Microsoft.Data.Sqlite): eine Zeile von `records` pro Erkennung (Datei, Modell, Gerät, Sprache, Zeit mit ihrem
 UTC-Versatz, Dauer, der Anfang des Textes) und ihre Fragmente in `segments`. Die Schema-Version steht in
-`PRAGMA user_version`; eine Datei einer neueren Version wird abgelehnt. Ein Eintrag weiß, wie er entstand (`kind`,
+`PRAGMA user_version`; eine Datei einer neueren Version wird abgelehnt. Die Einträge werden ohne Wiederverwendung
+nummeriert (`AUTOINCREMENT`, Schema-Version 7), sodass eine Seite, die noch die Nummer eines gelöschten Eintrags hält,
+nie einen anderen öffnet oder ändert. Ein Eintrag weiß, wie er entstand (`kind`,
 Schema-Version 5): eine Erkennung oder eine erzeugte Sprache; der Tab Verlauf kennzeichnet jeden Eintrag so und listet
 sie, die neuesten zuerst; ein Eintrag öffnet sich in seinem Fenster, aus der Datenbank gelesen, und kann nach einer
 Bestätigung gelöscht werden. Eine Löschung ist physisch: `secure_delete` überschreibt die gelöschten Zeilen und
@@ -144,8 +146,11 @@ Adresse, einen optionalen Schlüssel, das Modell und den Kontext, mit dem es gel
 Speicher: Ihr Worker endete mit der Erkennung.
 
 `Summarizer` (Core) passt den Text an den Kontext an: Ein Text, der passt, wird in einer Anfrage zusammengefasst; ein
-längerer wird von `TextChunker` (Zeilen, dann Sätze, dann Wörter) in Teile von etwa 2,5 Zeichen pro Token geschnitten,
-jeder Teil liefert Notizen, und die Notizen werden zur Zusammenfassung verbunden (erst gruppenweise, wenn sie zusammen
+längerer wird von `TextChunker` (Zeilen, dann Sätze, auch nach den Satzzeichen des Chinesischen, Japanischen, der
+Schriften Indiens und des Arabischen, dann Wörter, dann ganze Zeichen) in Teile geschnitten, die nach der Schätzung von
+`TokenBudget` passen (ein Buchstabe einer in Wörtern geschriebenen Schrift zählt als 0,4 Token; ein Zeichen des
+Chinesischen, Japanischen, Koreanischen, Thailändischen oder einer Schrift Indiens als ganzes Token, sodass ein solcher
+Text kleinere Teile bekommt); jeder Teil liefert Notizen, und die Notizen werden zur Zusammenfassung verbunden (erst gruppenweise, wenn sie zusammen
 zu lang sind, höchstens drei Runden). Die Anweisungen kommen aus dem Sprachpaket (`Summary.Prompt.*`), sodass die
 Zusammenfassung in der Sprache der Oberfläche ist. `ReasoningFilter` entfernt das `<think>…</think>` denkender
 Modelle. `OpenAiCompatibleClient` streamt die Antwort (`stream: true`, Server-Sent Events; ein Server, der am Stück
@@ -178,11 +183,15 @@ wird, werden seine Fragmente zu Abschnitten von etwa 600 Zeichen mit ihren Momen
 (`PassageBuilder`): die Einheit, die die Suche findet, das Modell liest und zu der der Player springt (Schema-Version 4:
 `passages`, vorher gespeicherte Einträge werden beim Upgrade indiziert).
 
-- **Nach Wörtern**: der FTS5-Index `passages_fts` (`unicode61`, Diakritika gefaltet, nach BM25 sortiert).
-  `FullTextQuery` macht aus dem, was der Benutzer getippt hat, eine sichere Abfrage: Wörter in Anführungszeichen
-  bilden eine Wendung; die anderen Wörter werden nach ihrem Anfang ohne die letzten ein oder zwei Buchstaben gesucht,
-  sodass andere Formen passen (*договоров* findet *договор*); ein beliebiges Wort genügt, mehr davon stehen höher. Nur
-  Buchstaben und Ziffern erreichen den Index.
+- **Nach Wörtern**: der FTS5-Index `passages_fts` (`unicode61`, Diakritika gefaltet, nach BM25 sortiert). Ein Wort
+  besteht aus Buchstaben, Zahlen und den mit Buchstaben verbundenen Zeichen (`categories 'L* N* Co M*'`,
+  Schema-Version 7), sodass ein Wort auf Hindi, Bengalisch oder Thai ganz bleibt. `FullTextQuery` macht aus dem, was
+  der Benutzer getippt hat, eine sichere Abfrage: Wörter in Anführungszeichen bilden eine Wendung; die anderen Wörter
+  werden nach ihrem Anfang ohne die letzten ein oder zwei Buchstaben gesucht, sodass andere Formen passen (*contracts*
+  findet *contract* und *contracted*); ein Wort mit einer Ziffer wird ganz gesucht; ein beliebiges Wort genügt, mehr
+  davon stehen höher. Nur die Zeichen von Wörtern erreichen den Index. Chinesisch und Japanisch werden ohne Leerzeichen
+  geschrieben, daher nimmt der Index eine ganze Folge ihrer Zeichen als ein Wort: Ein solcher Text wird nur über seinen
+  Anfang gefunden, besser über die Bedeutung.
 - **Nach Bedeutung**: ein Embedding-Modell auf demselben Server (`POST embeddings`), in den Einstellungen neben dem
   Modell der Zusammenfassungen gewählt; ein mehrsprachiges (bge-m3, multilingual-e5) für nicht englische Sprache. Vor
   einer Suche bekommt jeder Abschnitt ohne Vektor dieses Modells einen, sechzehn pro Anfrage (die Indizierung wird
@@ -195,6 +204,11 @@ wird, werden seine Fragmente zu Abschnitten von etwa 600 Zeichen mit ihren Momen
   zufälligen Schlüssel; von der ersten Suche gestartet, für jede Anfrage gehalten, nach fünf Minuten ohne Anfragen, beim
   Beenden in den Einstellungen und mit der Anwendung beendet. Die Einstellungen zeigen seinen Zustand, den Speicher und
   den Prozessoranteil seines Prozesses.
+  Der Schlüssel eines Servers von Voicer wird in seiner Umgebung übergeben (`LLAMA_API_KEY`), nie unter seinen
+  Argumenten, die jeder Benutzer des Computers lesen kann. Unter Windows kommt jeder Prozess von llama.cpp in ein
+  Job-Objekt, das das System mit der Anwendung beendet, wie auch immer sie endet; jeder Server wird außerdem in
+  `Data/Temp/Servers` notiert (`ServerProcessRegistry`), sodass der nächste Start unter Linux und macOS einen Server
+  beendet, den ein abgestürzter Lauf zurückließ.
   Der Abschnitt „Modelle der Verlaufssuche“ der Einstellungen enthält eine einzige Wahl der Quelle (`ModelSource`,
   gespeichert als `search.source`): aus, ein Modell von Voicer oder ein Embedding-Modell des Servers; eine Wahl, die
   noch nicht bereit ist (Modell nicht heruntergeladen, llama.cpp fehlt, kein Modell des Servers gewählt), sucht nach
@@ -260,6 +274,11 @@ von Aufnahmen eine Stimme behält.
 `AppPaths` wählt den Datenordner: `--data <folder>`; sonst `Data` neben der Markierung `voicer.portable` eines
 Pakets; sonst `Data` neben dem Programm; und wenn dieser Ordner nicht beschreibbar ist (Program Files, `/opt`), das
 Profil des Benutzers (`%LOCALAPPDATA%\Voicer\Data`, `~/.local/share/Voicer/Data`).
+
+Das erste Fenster über einem Datenordner hält dessen Sperrdatei, `Data/voicer.lock` (`DataFolderLock`); nur dieses
+Fenster räumt auf, was frühere Läufe in `Data/Temp` zurückließen, sodass ein zweites Fenster die Tondateien des ersten
+nicht löscht. Die Datei der Einstellungen wird bei jeder Änderung atomar ersetzt; eine Datei, die gerade nicht lesbar
+ist (ein anderes Programm hält sie), wird nicht überschrieben, sodass eine Änderung nie die übrigen Einstellungen löscht.
 
 Ein Versagen des Fensters, mit dem nichts gerechnet hat, beendet die Anwendung nicht: `App` fängt es am Dispatcher ab,
 schreibt es in `Data/errors.log` (`ErrorLog`: der Moment, der Typ, die Meldung und der Stack; die Datei beginnt ab

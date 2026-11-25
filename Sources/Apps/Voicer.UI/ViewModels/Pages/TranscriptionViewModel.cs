@@ -633,7 +633,8 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
     }
 
     /// <summary>
-    /// Writes the summary of the recognized text with the model of the settings, keeps it in the history and opens the
+    /// Writes the summary of the recognized text, with the corrections the user made in the history, with the model of
+    /// the settings, keeps it in the history and opens the
     /// window of the record with it. The speech engine is not in memory by then: its worker ended with the recognition.
     /// </summary>
     /// <returns>A task that completes when the window of the record is closed, or the summary failed or was stopped.</returns>
@@ -649,7 +650,6 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
         }
 
         var id = _recordId!.Value;
-        var transcript = Result!;
 
         _summaryStep = 1;
         _summarySteps = 1;
@@ -671,7 +671,8 @@ public sealed partial class TranscriptionViewModel : PageViewModelBase
         var done = false;
         try
         {
-            await _summaries.SummarizeAsync(id, transcript, progress, _recognition.Token);
+            // The text as the history keeps it: the user may have corrected it in the window of the record meanwhile.
+            await _summaries.SummarizeKeptAsync(id, progress, _recognition.Token);
             done = true;
         }
         catch (OperationCanceledException)

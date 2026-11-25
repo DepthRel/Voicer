@@ -5,6 +5,7 @@ using Voicer.Core.Search;
 using Voicer.Core.Summaries;
 using Voicer.Speech.Llama.Embeddings;
 using Voicer.Speech.Llama.Servers;
+using Voicer.Speech.Llama.Tools;
 using Voicer.UI.Enums;
 using Voicer.UI.Services.Configuration;
 using Voicer.UI.Services.Search;
@@ -37,6 +38,11 @@ public sealed class TextEmbedderSourceTests
     private readonly ISummaryPreferencesStore _preferences = Substitute.For<ISummaryPreferencesStore>();
 
     /// <summary>
+    /// Finds llama-server.
+    /// </summary>
+    private readonly ILlamaCppLocator _llamaCpp = Substitute.For<ILlamaCppLocator>();
+
+    /// <summary>
     /// The source under test.
     /// </summary>
     private readonly TextEmbedderSource _source;
@@ -49,7 +55,8 @@ public sealed class TextEmbedderSourceTests
     {
         _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
         _preferences.Load().Returns(_withServerModel);
-        _source = new TextEmbedderSource(_choice, _models, Substitute.For<ILlamaModelServer<EmbeddingModel>>(), _preferences, Substitute.For<ILanguageModelClient>());
+        _llamaCpp.LocateServer().Returns("llama-server");
+        _source = new TextEmbedderSource(_choice, _models, _llamaCpp, Substitute.For<ILlamaModelServer<EmbeddingModel>>(), _preferences, Substitute.For<ILanguageModelClient>());
     }
 
     /// <summary>
@@ -99,6 +106,11 @@ public sealed class TextEmbedderSourceTests
     {
         _choice.Load().Returns(ModelSource.Local);
         _models.Preferred().Returns((EmbeddingModel?)null);
+
+        _source.Current().Should().BeNull();
+
+        _models.Preferred().Returns(EmbeddingModelCatalog.BgeM3);
+        _llamaCpp.LocateServer().Returns((string?)null);
 
         _source.Current().Should().BeNull();
 

@@ -77,7 +77,7 @@ public sealed class SummarizerTests
     [Fact]
     public async Task LongText_IsSummarizedPartByPart()
     {
-        var limit = Summarizer.PartLength(SummarySettings.MIN_CONTEXT_TOKENS);
+        var limit = (int)(Summarizer.PartTokens(SummarySettings.MIN_CONTEXT_TOKENS) * 2.5);
         var line = new string('а', limit - 10);
 
         var summary = await _summarizer.SummarizeAsync(Talk(line, line, line), Settings(SummarySettings.MIN_CONTEXT_TOKENS), null, CancellationToken.None);
@@ -122,11 +122,11 @@ public sealed class SummarizerTests
     /// The part of the text grows with the context of the model and stays positive for the smallest one.
     /// </summary>
     [Fact]
-    public void PartLength_FollowsTheContext()
+    public void PartTokens_FollowsTheContext()
     {
-        Summarizer.PartLength(SummarySettings.MIN_CONTEXT_TOKENS).Should().BePositive();
-        Summarizer.PartLength(32768).Should().BeGreaterThan(Summarizer.PartLength(8192));
-        Summarizer.PartLength(10).Should().Be(Summarizer.PartLength(SummarySettings.MIN_CONTEXT_TOKENS));
+        Summarizer.PartTokens(SummarySettings.MIN_CONTEXT_TOKENS).Should().BePositive();
+        Summarizer.PartTokens(32768).Should().BeGreaterThan(Summarizer.PartTokens(8192));
+        Summarizer.PartTokens(10).Should().Be(Summarizer.PartTokens(SummarySettings.MIN_CONTEXT_TOKENS));
     }
 
     /// <summary>

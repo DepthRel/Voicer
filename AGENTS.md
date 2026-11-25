@@ -123,8 +123,11 @@ A new project is added to `Voicer.slnx` in the solution folder that repeats its 
 ## Data
 
 Everything the application keeps lives in one data folder, `Data`, inside the folder of the application: downloaded
-models in `Data/Models/<model id>`, tools in `Data/Tools` (FFmpeg on Windows, llama.cpp), temporary sound in
-`Data/Temp`, the settings in `Data/settings.json`, the history of the recognitions and generations in the SQLite database `Data/voicer.db`. A package marks its root with `voicer.portable`; a folder the user cannot write to
+models in `Data/Models/<model id>` (a Whisper model in the folder of its family, `Data/Models/<family>`, with its
+quantizations side by side), tools in `Data/Tools` (FFmpeg on Windows, llama.cpp), temporary sound in `Data/Temp`, the
+settings in `Data/settings.json`, the history of the recognitions and generations in the SQLite database
+`Data/voicer.db`. The first window over the folder holds `Data/voicer.lock`; only it clears `Data/Temp` of what
+earlier runs left. A package marks its root with `voicer.portable`; a folder the user cannot write to
 (a system-wide installation) sends the data to the profile; `--data <folder>` names it explicitly
 (`Voicer.Core/Paths/AppPaths.cs`).
 

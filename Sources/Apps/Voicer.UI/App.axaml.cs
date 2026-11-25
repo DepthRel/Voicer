@@ -32,6 +32,7 @@ using Voicer.UI.Services.Diagnostics;
 using Voicer.UI.Services.Dialogs;
 using Voicer.UI.Services.Generation;
 using Voicer.UI.Services.History;
+using Voicer.UI.Services.Lifetime;
 using Voicer.UI.Services.Localization;
 using Voicer.UI.Services.Search;
 using Voicer.UI.Services.Summaries;
@@ -65,6 +66,11 @@ public sealed class App : Application
     /// The llama-server of the model of the summaries, ended with the application.
     /// </summary>
     private LlamaChatServer? _chatServer;
+
+    /// <summary>
+    /// The lock of the data folder, held for as long as the window runs, or <see langword="null"/> before it is taken.
+    /// </summary>
+    private DataFolderLock? _dataLock;
 
     /// <summary>
     /// Whether the notice of an unexpected failure is on the screen, so a failure that repeats does not stack them.
@@ -113,6 +119,9 @@ public sealed class App : Application
             var language = new LanguageService(Localizer, settings);
             language.Initialize();
 
+            // A second window over the same data folder leaves the temporary files of the first one alone.
+            _dataLock = DataFolderLock.Acquire(paths.DataDirectory);
+
             var window = new MainWindow();
             GuardAgainstFailures(new ErrorLog(paths.ErrorLogFile), new AvaloniaDialogService(() => window));
             window.DataContext = Compose(paths, settings, language, () => window);
@@ -123,6 +132,7 @@ public sealed class App : Application
                 _embeddingServer?.Dispose();
                 _chatServer?.Dispose();
                 _http?.Dispose();
+                _dataLock?.Dispose();
             };
         }
 
@@ -193,11 +203,20 @@ public sealed class App : Application
         var store = new ModelStore(paths.ModelsDirectory);
         var ffmpeg = new FfmpegLocator(paths.ToolsDirectory);
         var worker = new ProcessWorkerClient(WorkerLaunch.ForCurrentProcess());
+        var clearLeftovers = _dataLock?.IsHeld ?? true;
         var runner = new TranscriptionRunner(new FfmpegAudioExtractor(ffmpeg), worker, paths.TempDirectory);
-        runner.ClearLeftovers();
         var history = new SqliteTranscriptHistory(paths.DatabaseFile);
         var temporaryAudio = new TemporaryAudioFolder(Path.Combine(paths.TempDirectory, "Audio"));
-        temporaryAudio.ClearLeftovers();
+        if (clearLeftovers)
+        {
+            runner.ClearLeftovers();
+            temporaryAudio.ClearLeftovers();
+        }
+
+        // A server left behind by a run that ended without stopping it is ended now; one of a running window stays.
+        var servers = new ServerProcessRegistry(Path.Combine(paths.TempDirectory, "Servers"));
+        servers.EndOrphans();
+
         var keeper = new RecordKeeper(history, new FfmpegAudioEncoder(ffmpeg), temporaryAudio);
         var decoder = new FfmpegPcmDecoder(ffmpeg);
         Func<string, TimeSpan, IAudioPlayer> createPlayer =
@@ -208,18 +227,22 @@ public sealed class App : Application
             new LlamaTtsSynthesizer(llamaCpp, voiceStore),
             new FfmpegVoiceSampleExtractor(ffmpeg),
             Path.Combine(paths.TempDirectory, "Generation"));
-        generationRunner.ClearLeftovers();
+        if (clearLeftovers)
+        {
+            generationRunner.ClearLeftovers();
+        }
+
         var languageModels = new OpenAiCompatibleClient(_http);
         var summaryPreferences = new SummaryPreferencesStore(preferences);
         var chatStore = new ChatModelStore(paths.ModelsDirectory);
-        _chatServer = new LlamaChatServer(llamaCpp, chatStore, new ServerProcessLauncher(), TimeProvider.System);
+        _chatServer = new LlamaChatServer(llamaCpp, chatStore, new ServerProcessLauncher(servers), TimeProvider.System);
         var summarySource = new SummarySourceStore(preferences, chatStore, summaryPreferences);
         var chat = new ChatModelSource(summarySource, chatStore, llamaCpp, _chatServer, summaryPreferences);
         var summaries = new RecordSummaryService(new Summarizer(languageModels, Localizer), chat, history);
         var embeddingStore = new EmbeddingModelStore(paths.ModelsDirectory);
-        _embeddingServer = new LlamaEmbeddingServer(llamaCpp, embeddingStore, new ServerProcessLauncher(), TimeProvider.System);
+        _embeddingServer = new LlamaEmbeddingServer(llamaCpp, embeddingStore, new ServerProcessLauncher(servers), TimeProvider.System);
         var searchSource = new SearchSourceStore(preferences, embeddingStore, summaryPreferences);
-        var embedders = new TextEmbedderSource(searchSource, embeddingStore, _embeddingServer, summaryPreferences, languageModels);
+        var embedders = new TextEmbedderSource(searchSource, embeddingStore, llamaCpp, _embeddingServer, summaryPreferences, languageModels);
         var recordSearch = new RecordSearch(new SqliteSearchIndex(paths.DatabaseFile));
         var search = new RecordSearchService(recordSearch, new RecordQuestions(recordSearch, languageModels, Localizer), chat, embedders);
         var viewer = new RecordViewer(

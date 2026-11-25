@@ -155,7 +155,7 @@ public sealed class SqliteCorrectionsTests : IDisposable
         var text = await new SqliteTranscriptHistory(File).FindTextAsync(id, CancellationToken.None);
 
         text!.Corrections.Should().BeEmpty();
-        Count("PRAGMA user_version;").Should().Be(6);
+        Count("PRAGMA user_version;").Should().Be(7);
     }
 
     /// <summary>

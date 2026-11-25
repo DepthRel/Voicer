@@ -263,9 +263,8 @@ public abstract class LlamaModelServer<TModel> : ILlamaModelServer<TModel>, ILla
     /// </summary>
     /// <param name="modelFile">The file of the weights of the model.</param>
     /// <param name="model">The model.</param>
-    /// <param name="apiKey">The key the server asks of every request.</param>
     /// <returns>The arguments, without a shell.</returns>
-    protected abstract IReadOnlyList<string> Arguments(string modelFile, TModel model, string apiKey);
+    protected abstract IReadOnlyList<string> Arguments(string modelFile, TModel model);
 
     /// <summary>
     /// Starts a server of a model and waits until it is ready; the caller holds the gate.
@@ -289,7 +288,7 @@ public abstract class LlamaModelServer<TModel> : ILlamaModelServer<TModel>, ILla
         }
 
         var key = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(KEY_BYTES));
-        var process = _launcher.Start(program, Arguments(_store.FileOf(model), model, key), line => LlamaServerOutput.ReadAddress(line) is not null);
+        var process = _launcher.Start(program, Arguments(_store.FileOf(model), model), key, line => LlamaServerOutput.ReadAddress(line) is not null);
         lock (_sync)
         {
             _starting = process;

@@ -38,8 +38,11 @@ Dependencies point inwards; Core knows no UI, network or engine.
 - **Device indexes come from ggml itself**: the GPU index is the position among GPU/IGPU devices of the ggml registry,
   exactly what `WhisperFactoryOptions.GpuDevice` takes; the processor is `-1`.
 - **Everything downloaded is pinned** (HTTPS, exact size, SHA-256) and used only after the check; a part resumes.
-- **One data folder** `Data` (`Models/<id>`, `Tools/FFmpeg`, `Temp`, `settings.json`) next to `voicer.portable`, or
-  next to the program, or in the profile when not writable; `--data` overrides.
+- **One data folder** `Data` (`Models/<id>`, Whisper in `Models/<family>`; `Tools/FFmpeg`, `Temp`, `settings.json`,
+  `voicer.db`, `voicer.lock`) next to `voicer.portable`, or next to the program, or in the profile when not writable;
+  `--data` overrides.
+- **A llama-server ends with the application**: its key goes in `LLAMA_API_KEY`, never in the arguments; on Windows it
+  joins the job object of `ChildProcessJob`; `ServerProcessRegistry` ends what a failed run left on the next start.
 - **Text to speech runs in `llama-tts`**, a process per piece of text, so the model leaves memory with it; the device
   index of ggml is its `VulkanN`.
 - **Codes, not texts, cross the process boundary** (`WorkerErrorCode`): the UI localizes.

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Voicer.Core.Synthesis;
 using Voicer.Localization;
+using Voicer.Speech.Llama.Servers;
 using Voicer.Speech.Llama.Tools;
 
 namespace Voicer.Speech.Llama.Engine;
@@ -123,6 +124,9 @@ public sealed class LlamaTtsSynthesizer : ISpeechSynthesizer
         {
             throw LocalizedError.Create(m => new InvalidDataException(m, ex), "LlamaCpp.StartFailed", ex.Message);
         }
+
+        // On Windows the process ends with the application, however the application ends.
+        ChildProcessJob.Attach(process);
 
         var readers = new[] { Collect(process.StandardOutput, log), Collect(process.StandardError, log) };
         try

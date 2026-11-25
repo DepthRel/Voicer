@@ -25,7 +25,6 @@ public sealed class ProjectRulesTests
         ("Environment", "TickCount64"),
     ];
 
-
     /// <summary>
     /// Time comes from <see cref="TimeProvider"/>: the code of the product never reads the
     /// clock of the machine directly, so tests can control it.

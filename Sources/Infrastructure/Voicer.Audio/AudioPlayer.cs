@@ -345,15 +345,32 @@ public sealed class AudioPlayer : IAudioPlayer
 
         _disposed = true;
         _stop.Cancel();
+        var ended = true;
         try
         {
-            _loop?.Wait(_stopTimeout);
+            ended = _loop?.Wait(_stopTimeout) ?? true;
         }
         catch (AggregateException)
         {
             // The loop ended with the cancellation; nothing is left to report.
         }
 
+        if (ended)
+        {
+            Release();
+
+            return;
+        }
+
+        // The loop is still inside the device or the decoder: they are released when it leaves them, never under it.
+        _loop!.ContinueWith(_ => Release(), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+    }
+
+    /// <summary>
+    /// Releases the decoder, the device and the stop of the loop, once the loop no longer uses them.
+    /// </summary>
+    private void Release()
+    {
         CloseRun();
         _output?.Dispose();
         _stop.Dispose();

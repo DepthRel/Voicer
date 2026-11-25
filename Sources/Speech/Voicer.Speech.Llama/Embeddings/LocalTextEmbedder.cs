@@ -1,6 +1,7 @@
 using Voicer.Core.Embeddings;
 using Voicer.Core.Search;
 using Voicer.Core.Summaries;
+using Voicer.Core.Text;
 using Voicer.Localization;
 using Voicer.Speech.Llama.Servers;
 
@@ -48,7 +49,7 @@ public sealed class LocalTextEmbedder : ITextEmbedder
         ArgumentNullException.ThrowIfNull(texts);
 
         // A text longer than a slot is refused by the server: its beginning carries its meaning well enough.
-        var fitted = texts.Select(text => text.Length <= _model.MaxTextLength ? text : text[.._model.MaxTextLength]).ToList();
+        var fitted = texts.Select(text => TextCut.Beginning(text, _model.MaxTextLength)).ToList();
 
         using var lease = await _server.AcquireAsync(_model, cancellationToken).ConfigureAwait(false);
         try

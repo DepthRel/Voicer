@@ -58,7 +58,7 @@ public sealed class RecordQuestions : IRecordQuestions
         ArgumentNullException.ThrowIfNull(chat);
 
         var hits = await _search.SearchAsync(question, embedder, MAX_SOURCES, indexing, cancellationToken);
-        var sources = Fit(hits, Summarizer.PartLength(chat.ContextTokens));
+        var sources = Fit(hits, Summarizer.PartTokens(chat.ContextTokens));
         if (sources.Count == 0)
         {
             return new QuestionAnswer(_localizer.Get("Ask.NothingFound"), []);
@@ -84,7 +84,7 @@ public sealed class RecordQuestions : IRecordQuestions
     /// Keeps the best passages that fit into one request together.
     /// </summary>
     /// <param name="hits">The passages, the best first.</param>
-    /// <param name="limit">How many characters of passages fit.</param>
+    /// <param name="limit">How many tokens of passages fit, by the estimate of <see cref="TokenBudget"/>.</param>
     /// <returns>The passages that fit, in their order; at least the first one, cut to the limit.</returns>
     private static List<PassageHit> Fit(IReadOnlyList<PassageHit> hits, int limit)
     {
@@ -92,13 +92,14 @@ public sealed class RecordQuestions : IRecordQuestions
         var used = 0;
         foreach (var hit in hits)
         {
-            if (fitted.Count > 0 && used + hit.Text.Length > limit)
+            var tokens = TokenBudget.Estimate(hit.Text);
+            if (fitted.Count > 0 && used + tokens > limit)
             {
                 break;
             }
 
-            fitted.Add(hit.Text.Length <= limit ? hit : hit with { Text = hit.Text[..limit] });
-            used += Math.Min(hit.Text.Length, limit);
+            fitted.Add(tokens <= limit ? hit : hit with { Text = TokenBudget.Cut(hit.Text, limit) });
+            used += Math.Min(tokens, limit);
         }
 
         return fitted;

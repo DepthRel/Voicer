@@ -41,15 +41,22 @@ public sealed class ServerProcess : IServerProcess
     private readonly Queue<string> _log = new();
 
     /// <summary>
+    /// Called once the process is ended and released, or <see langword="null"/>.
+    /// </summary>
+    private readonly Action? _ended;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ServerProcess"/> class and starts reading the outputs of the
     /// started process.
     /// </summary>
     /// <param name="process">The started process, with both outputs redirected.</param>
     /// <param name="isReady">Tells whether a line says the server is ready.</param>
-    public ServerProcess(Process process, Func<string, bool> isReady)
+    /// <param name="ended">Called once the process is ended and released (its note is forgotten), or <see langword="null"/>.</param>
+    public ServerProcess(Process process, Func<string, bool> isReady, Action? ended = null)
     {
         _process = process ?? throw new ArgumentNullException(nameof(process));
         _isReady = isReady ?? throw new ArgumentNullException(nameof(isReady));
+        _ended = ended;
 
         var readers = new[] { Collect(process.StandardOutput), Collect(process.StandardError) };
         _ = Task.WhenAll(readers).ContinueWith(_ => _ready.TrySetResult(null), TaskScheduler.Default);
@@ -124,6 +131,7 @@ public sealed class ServerProcess : IServerProcess
         }
 
         _process.Dispose();
+        _ended?.Invoke();
     }
 
     /// <summary>

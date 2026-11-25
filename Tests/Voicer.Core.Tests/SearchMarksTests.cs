@@ -36,6 +36,32 @@ public sealed class SearchMarksTests
     }
 
     /// <summary>
+    /// The marks joined to letters belong to the word, as the index reads it: a word of Hindi or Thai stays whole, in the
+    /// query and in the marks.
+    /// </summary>
+    [Fact]
+    public void Words_KeepTheMarksOfTheirLetters()
+    {
+        FullTextQuery.Prefixes("हिंदी").Should().Equal("हिंद");
+        FullTextQuery.Prefixes("สวัสดี").Should().Equal("สวัสด");
+        FullTextQuery.Build("हिंदी भाषा").Should().Be("\"हिंद\"* OR \"भाषा\"*");
+
+        var marked = SearchMarks.Words("मुझे हिंदी पसंद है", FullTextQuery.Prefixes("हिंदी"));
+
+        marked.Words.Should().Equal(new TextMark(5, 5));
+    }
+
+    /// <summary>
+    /// A number is looked up whole, not by a shorter beginning that other numbers share.
+    /// </summary>
+    [Fact]
+    public void Numbers_AreNotShortened()
+    {
+        FullTextQuery.Build("100000").Should().Be("\"100000\"*");
+        FullTextQuery.Prefixes("Model2024 contracts").Should().Equal("model2024", "contrac");
+    }
+
+    /// <summary>
     /// A query without words marks nothing.
     /// </summary>
     [Fact]

@@ -64,4 +64,13 @@ public sealed class RecordSummaryService : IRecordSummaryService
 
         return summary;
     }
+
+    /// <inheritdoc />
+    public async Task<RecordSummary> SummarizeKeptAsync(long id, IProgress<SummaryProgress>? progress, CancellationToken cancellationToken)
+    {
+        var transcript = await _history.FindAsync(id, cancellationToken) ??
+            throw LocalizedError.Create(m => new IOException(m), "History.Missing");
+
+        return await SummarizeAsync(id, transcript, progress, cancellationToken);
+    }
 }

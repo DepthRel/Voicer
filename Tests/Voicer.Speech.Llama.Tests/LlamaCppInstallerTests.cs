@@ -133,6 +133,49 @@ public sealed class LlamaCppInstallerTests : IDisposable
     }
 
     /// <summary>
+    /// A link that goes up after a name is refused before anything is linked: where it leads would depend on the link
+    /// of that name.
+    /// </summary>
+    [Fact]
+    public void TarGz_LinkGoingUpAfterAName_IsRefused()
+    {
+        Directory.CreateDirectory(_tools);
+        var bad = TarGz("bad.tar.gz", ("llama-b1/lib.so", "link:y/../lib.so.1"));
+
+        var act = () => ArchiveExtractor.ExtractTarGz(bad, Path.Combine(_tools, "bad"));
+
+        act.Should().Throw<InvalidDataException>();
+    }
+
+    /// <summary>
+    /// A chain of links whose names each stay inside (a link to <c>.</c>, then a link to <c>..</c> through it) does not
+    /// lead a file out: nothing is unpacked through a link. Needs the right to create links (on Windows, the developer
+    /// mode); without it there is nothing to check.
+    /// </summary>
+    [Fact]
+    public void TarGz_ChainOfLinks_DoesNotLeadOut()
+    {
+        Directory.CreateDirectory(_tools);
+        var probe = Path.Combine(_tools, "probe");
+        try
+        {
+            File.CreateSymbolicLink(probe, "target");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return;
+        }
+
+        var bad = TarGz("bad.tar.gz", ("x", "link:."), ("x/l", "link:.."), ("l/evil", "outside"));
+        var destination = Path.Combine(_tools, "inside", "bad");
+
+        var act = () => ArchiveExtractor.ExtractTarGz(bad, destination);
+
+        act.Should().Throw<InvalidDataException>();
+        File.Exists(Path.Combine(_tools, "inside", "evil")).Should().BeFalse();
+    }
+
+    /// <summary>
     /// Makes the downloader write a ZIP archive with the given files where it is asked to.
     /// </summary>
     /// <param name="entries">The names and contents of the files.</param>
@@ -156,16 +199,24 @@ public sealed class LlamaCppInstallerTests : IDisposable
     /// Writes a gzipped tar archive with the given files.
     /// </summary>
     /// <param name="name">The name of the archive.</param>
-    /// <param name="entries">The names and contents of the files.</param>
+    /// <param name="entries">The names and contents of the files; a content <c>link:target</c> makes a symbolic link.</param>
     /// <returns>The full path of the archive.</returns>
     private string TarGz(string name, params (string Name, string Content)[] entries)
     {
+        const string LINK = "link:";
         var path = Path.Combine(_tools, name);
         using var file = File.Create(path);
         using var gzip = new GZipStream(file, CompressionLevel.Fastest);
         using var writer = new TarWriter(gzip);
         foreach (var (entryName, content) in entries)
         {
+            if (content.StartsWith(LINK, StringComparison.Ordinal))
+            {
+                writer.WriteEntry(new PaxTarEntry(TarEntryType.SymbolicLink, entryName) { LinkName = content[LINK.Length..] });
+
+                continue;
+            }
+
             var entry = new PaxTarEntry(TarEntryType.RegularFile, entryName)
             {
                 DataStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)),

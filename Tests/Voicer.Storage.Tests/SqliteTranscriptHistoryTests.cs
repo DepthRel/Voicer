@@ -183,6 +183,64 @@ public sealed class SqliteTranscriptHistoryTests : IDisposable
     }
 
     /// <summary>
+    /// The number of a deleted record, even the newest one, never names a new record: a page that still holds it does
+    /// not open or change another record.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task Ids_OfDeletedRecords_AreNotReused()
+    {
+        var history = new SqliteTranscriptHistory(File);
+        var newest = await history.AddAsync(Transcript("a.mp3", DateTimeOffset.UnixEpoch, "A."), null, CancellationToken.None);
+        await history.DeleteAsync(newest, CancellationToken.None);
+
+        var next = await new SqliteTranscriptHistory(File).AddAsync(Transcript("b.mp3", DateTimeOffset.UnixEpoch, "B."), null, CancellationToken.None);
+
+        next.Should().BeGreaterThan(newest);
+        (await history.FindAsync(newest, CancellationToken.None)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// A file of the first version, whose records were numbered with reuse, keeps its records and their fragments when
+    /// the table is rebuilt, and the fragments still go with their record.
+    /// </summary>
+    /// <returns>A task that completes with the test.</returns>
+    [Fact]
+    public async Task FileOfVersion1_IsRebuilt_WithoutLosingRows()
+    {
+        Directory.CreateDirectory(_folder);
+        using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = File, Pooling = false }.ToString()))
+        {
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                PRAGMA auto_vacuum = INCREMENTAL;
+                CREATE TABLE records (id INTEGER PRIMARY KEY, source_path TEXT NOT NULL, source_name TEXT NOT NULL,
+                    model TEXT NOT NULL, device TEXT NOT NULL, language TEXT NULL, created_at_ms INTEGER NOT NULL,
+                    utc_offset_min INTEGER NOT NULL, duration_ms INTEGER NOT NULL, preview TEXT NOT NULL);
+                CREATE TABLE segments (record_id INTEGER NOT NULL REFERENCES records (id) ON DELETE CASCADE,
+                    position INTEGER NOT NULL, start_ms INTEGER NOT NULL, end_ms INTEGER NOT NULL, text TEXT NOT NULL,
+                    PRIMARY KEY (record_id, position)) WITHOUT ROWID;
+                INSERT INTO records VALUES (1, 'C:/one.mp3', 'one.mp3', 'Whisper Small Q5', 'CPU', 'en', 0, 0, 2000, 'One.');
+                INSERT INTO records VALUES (2, 'C:/two.mp3', 'two.mp3', 'Whisper Small Q5', 'CPU', 'en', 1, 0, 2000, 'Two.');
+                INSERT INTO segments VALUES (1, 0, 0, 2000, 'One.');
+                INSERT INTO segments VALUES (2, 0, 0, 2000, 'Two.');
+                PRAGMA user_version = 1;
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        var history = new SqliteTranscriptHistory(File);
+
+        (await history.ListAsync(CancellationToken.None)).Select(e => e.Id).Should().Equal(2, 1);
+        (await history.FindAsync(1, CancellationToken.None))!.Text.Should().Be("One.");
+        (await history.DeleteAsync(2, CancellationToken.None)).Should().BeTrue();
+        CountSegments(2).Should().Be(0);
+        CountSegments(1).Should().Be(1);
+        (await history.AddAsync(Transcript("three.mp3", DateTimeOffset.UnixEpoch, "Three."), null, CancellationToken.None)).Should().Be(3);
+    }
+
+    /// <summary>
     /// A file written by a newer build is not touched: the failure says so in the language of the user.
     /// </summary>
     /// <returns>A task that completes with the test.</returns>
